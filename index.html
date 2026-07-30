@@ -29,6 +29,22 @@
 
   #app{display:flex;min-height:100vh;}
 
+  /* Login screen */
+  #loginScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--navy);
+  }
+  #loginBox{
+    background:#242f45;border:1px solid rgba(255,255,255,.08);border-radius:14px;
+    padding:32px 30px;width:320px;max-width:90vw;text-align:center;
+  }
+  #loginBox .tag{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:4px;}
+  #loginBox h1{margin:0 0 8px;font-size:20px;color:#fff;}
+  #loginBox p{margin:0 0 16px;font-size:13px;color:#9aa6ba;}
+  #loginBox input{background:#1a2337;border:1px solid rgba(255,255,255,.12);color:#fff;text-align:center;}
+  #loginBox input::placeholder{color:#6b7688;}
+  #loginBox .msg{text-align:left;}
+
   /* Sidebar */
   #sidebar{width:220px;flex-shrink:0;background:var(--navy);color:#dbe2ee;display:flex;flex-direction:column;}
   #sidebar .brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
@@ -154,7 +170,19 @@
 </head>
 <body>
 
-<div id="app">
+<div id="loginScreen">
+  <div id="loginBox">
+    <span class="tag">Inventaris</span>
+    <h1>Stok Gudang</h1>
+    <p>Masukkan nama & kode akses untuk masuk.</p>
+    <input type="text" id="loginNama" placeholder="Nama Anda" autocomplete="off" style="margin-bottom:10px;">
+    <input type="password" id="loginInput" placeholder="Kode akses" autocomplete="off">
+    <button class="btn" id="loginBtn" style="width:100%;margin-top:10px;">Masuk</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
   <div id="sidebar">
     <div class="brand">
       <span class="tag">Inventaris</span>
@@ -166,6 +194,7 @@
       <button data-view="stok"><span class="num">03</span> Stok Barang</button>
       <button data-view="trace"><span class="num">04</span> Trace S/N</button>
       <button data-view="harga"><span class="num">05</span> Pedoman Harga</button>
+      <button data-view="log" id="navLog" style="display:none;"><span class="num">06</span> Log Aktivitas</button>
     </nav>
     <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span></div>
   </div>
@@ -283,6 +312,17 @@
       </div>
     </section>
 
+    <!-- LOG AKTIVITAS -->
+    <section class="view" id="view-log">
+      <div class="view-header">
+        <h2>Log Aktivitas</h2>
+        <p>Riwayat siapa yang login, input pembelian, dan mengubah status stok.</p>
+      </div>
+      <div class="panel">
+        <div id="logTableWrap"><p class="empty">Memuat...</p></div>
+      </div>
+    </section>
+
   </div>
 </div>
 
@@ -311,23 +351,29 @@
 /* =========================================================
    KONFIGURASI
    Ganti URL di bawah ini dengan URL Web App Google Apps
-   Script Anda, dan TOKEN dengan kode rahasia yang sama
-   persis dengan APP_TOKEN di Code.gs (lihat Code.gs untuk
-   cara deploy).
+   Script Anda (lihat Code.gs untuk cara deploy).
+   Kode akses TIDAK ditulis di sini lagi — pengguna mengisinya
+   sendiri lewat layar login, supaya tidak terlihat di source
+   file ini.
    ========================================================= */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyL9ntcEzEM3wsswOA2crzHN57UW611D7CUX3gSrqvOS223bZ8zAd49RFtvej2VSc8I/exec";
-const APP_TOKEN = "Surya#120322";
+let APP_TOKEN = null; // diisi setelah login berhasil, hanya tersimpan di memori (hilang saat halaman ditutup)
+let currentUser = null; // nama pengguna yang login, hanya tersimpan di memori
+let currentIsAdmin = false; // diisi otomatis dari respons backend setelah login
 
 const configured = APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('https://script.google.com') === 0;
 
 async function apiGet(action, params={}){
   const url = new URL(APPS_SCRIPT_URL);
   url.searchParams.set('action', action);
+
   url.searchParams.set('token', APP_TOKEN);
+  url.searchParams.set('nama', currentUser || '');
   Object.keys(params).forEach(k => { if(params[k]) url.searchParams.set(k, params[k]); });
   const res = await fetch(url.toString());
   const json = await res.json();
   if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
+  currentIsAdmin = !!json.isAdmin;
   return json.data;
 }
 
@@ -335,10 +381,11 @@ async function apiPost(action, payload={}){
   const res = await fetch(APPS_SCRIPT_URL, {
     method:'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'}, // hindari CORS preflight
-    body: JSON.stringify(Object.assign({action, token: APP_TOKEN}, payload))
+    body: JSON.stringify(Object.assign({action, token: APP_TOKEN, nama: currentUser}, payload))
   });
   const json = await res.json();
   if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
+  currentIsAdmin = !!json.isAdmin;
   return json.data;
 }
 
@@ -368,6 +415,7 @@ document.querySelectorAll('#nav button').forEach(btn=>{
     document.getElementById('view-'+btn.dataset.view).classList.add('active');
     if(btn.dataset.view === 'dashboard') loadDashboard();
     if(btn.dataset.view === 'stok') loadStok();
+    if(btn.dataset.view === 'log') loadLog();
   });
 });
 
@@ -599,8 +647,77 @@ async function loadHarga(){
   }
 }
 
-/* ---------- Init ---------- */
-checkConn().then(()=>{ loadDashboard(); });
+/* ---------- Login ---------- */
+async function doLogin(){
+  const nameInput = document.getElementById('loginNama');
+  const input = document.getElementById('loginInput');
+  const msg = document.getElementById('loginMsg');
+  const btn = document.getElementById('loginBtn');
+  const nama = nameInput.value.trim();
+  const kode = input.value.trim();
+  msg.className = 'msg'; msg.style.display = 'none';
+
+  if(!configured){
+    msg.className = 'msg err';
+    msg.textContent = 'Aplikasi belum dikonfigurasi (APPS_SCRIPT_URL kosong). Hubungi admin.';
+    return;
+  }
+  if(!nama){ msg.className='msg err'; msg.textContent='Nama wajib diisi.'; return; }
+  if(!kode){ return; }
+
+  btn.disabled = true; btn.textContent = 'Memeriksa...';
+  APP_TOKEN = kode;
+  currentUser = nama;
+  try{
+    await apiGet('ping'); // sekadar cek koneksi dasar
+    // Verifikasi token dengan memanggil endpoint yang butuh auth
+    await apiGet('getDashboard');
+    await apiPost('recordLogin', {}); // catat login (nama sudah otomatis terlampir lewat apiPost)
+    document.getElementById('navLog').style.display = currentIsAdmin ? 'flex' : 'none';
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    checkConn();
+    loadDashboard();
+  }catch(err){
+    APP_TOKEN = null;
+    currentUser = null;
+    msg.className = 'msg err';
+    msg.textContent = 'Kode akses salah, atau: ' + err.message;
+  }finally{
+    btn.disabled = false; btn.textContent = 'Masuk';
+  }
+}
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('loginNama').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginInput').focus(); });
+document.getElementById('loginNama').focus();
+
+/* ---------- Log Aktivitas ---------- */
+async function loadLog(){
+  const wrap = document.getElementById('logTableWrap');
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getAktivitas');
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada aktivitas.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Waktu</th><th>Jenis</th><th>Nama</th><th>Detail</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td>${fmtDT(r.waktu)}</td>
+              <td><span class="badge ${r.tipe==='Login'?'Gudang':(r.tipe==='Ubah Status'?'Terpasang':'Rusak')}">${r.tipe}</span></td>
+              <td><strong>${r.nama}</strong></td>
+              <td>${r.detail}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
 </script>
 </body>
 </html>
