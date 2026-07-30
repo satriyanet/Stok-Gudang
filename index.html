@@ -311,15 +311,19 @@
 /* =========================================================
    KONFIGURASI
    Ganti URL di bawah ini dengan URL Web App Google Apps
-   Script Anda (lihat Code.gs untuk cara deploy).
+   Script Anda, dan TOKEN dengan kode rahasia yang sama
+   persis dengan APP_TOKEN di Code.gs (lihat Code.gs untuk
+   cara deploy).
    ========================================================= */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyL9ntcEzEM3wsswOA2crzHN57UW611D7CUX3gSrqvOS223bZ8zAd49RFtvej2VSc8I/exec";
+const APP_TOKEN = "Surya#120322";
 
 const configured = APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('https://script.google.com') === 0;
 
 async function apiGet(action, params={}){
   const url = new URL(APPS_SCRIPT_URL);
   url.searchParams.set('action', action);
+  url.searchParams.set('token', APP_TOKEN);
   Object.keys(params).forEach(k => { if(params[k]) url.searchParams.set(k, params[k]); });
   const res = await fetch(url.toString());
   const json = await res.json();
@@ -331,7 +335,7 @@ async function apiPost(action, payload={}){
   const res = await fetch(APPS_SCRIPT_URL, {
     method:'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'}, // hindari CORS preflight
-    body: JSON.stringify(Object.assign({action}, payload))
+    body: JSON.stringify(Object.assign({action, token: APP_TOKEN}, payload))
   });
   const json = await res.json();
   if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
@@ -378,9 +382,8 @@ async function checkConn(){
     return;
   }
   try{
-    const d = await apiGet('ping');
-    dot.classList.add('ok');
-    text.textContent = d.email ? ('Masuk sebagai ' + d.email) : 'Tersambung ke Google Sheet';
+    await apiGet('ping');
+    dot.classList.add('ok'); text.textContent = 'Tersambung ke Google Sheet';
     banner.style.display = 'none';
   }catch(err){
     dot.classList.remove('ok'); text.textContent = 'Gagal tersambung';
