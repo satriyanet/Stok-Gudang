@@ -378,8 +378,9 @@ async function checkConn(){
     return;
   }
   try{
-    await apiGet('ping');
-    dot.classList.add('ok'); text.textContent = 'Tersambung ke Google Sheet';
+    const d = await apiGet('ping');
+    dot.classList.add('ok');
+    text.textContent = d.email ? ('Masuk sebagai ' + d.email) : 'Tersambung ke Google Sheet';
     banner.style.display = 'none';
   }catch(err){
     dot.classList.remove('ok'); text.textContent = 'Gagal tersambung';
