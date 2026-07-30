@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stok Gudang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2230;
+    --ink-soft:#5b6472;
+    --bg:#f2f3f5;
+    --panel:#ffffff;
+    --line:#e1e4e9;
+    --amber:#dd7a1f;
+    --amber-dark:#b85f0f;
+    --navy:#1f2a3d;
+    --blue:#2563a8;
+    --green:#1c7a4d;
+    --red:#b23a3a;
+    --gray:#6b7280;
+    --radius:10px;
+    font-size:15px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;}
+  code, .mono{font-family:'IBM Plex Mono',monospace;}
+
+  #app{display:flex;min-height:100vh;}
+
+  /* Sidebar */
+  #sidebar{width:220px;flex-shrink:0;background:var(--navy);color:#dbe2ee;display:flex;flex-direction:column;}
+  #sidebar .brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+  #sidebar .brand .tag{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:4px;}
+  #sidebar .brand h1{margin:0;font-size:19px;font-weight:700;color:#fff;}
+  #sidebar nav{flex:1;padding:14px 10px;}
+  #sidebar nav button{
+    width:100%;text-align:left;background:none;border:none;color:#c4cddc;
+    padding:10px 12px;border-radius:8px;font-size:14px;font-family:inherit;cursor:pointer;
+    display:flex;align-items:center;gap:10px;margin-bottom:2px;transition:background .15s;
+  }
+  #sidebar nav button .num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7c8aa3;width:16px;}
+  #sidebar nav button:hover{background:rgba(255,255,255,.06);}
+  #sidebar nav button.active{background:var(--amber);color:#1a1200;font-weight:600;}
+  #sidebar nav button.active .num{color:#3a2600;}
+  #sidebar .status{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#9aa6ba;display:flex;align-items:center;gap:8px;}
+  #sidebar .dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;}
+  #sidebar .dot.ok{background:#3fbf7f;}
+
+  /* Main */
+  #main{flex:1;padding:28px 34px;max-width:1180px;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .view-header{margin-bottom:22px;}
+  .view-header h2{margin:0 0 4px;font-size:22px;}
+  .view-header p{margin:0;color:var(--ink-soft);font-size:13.5px;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
+  .panel h3{margin:0 0 14px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+
+  /* Dashboard cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;}
+  .card .label{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .card .value{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;margin-top:6px;}
+  .card.accent{border-top:3px solid var(--amber);}
+
+  .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+  .status-chip{border-radius:8px;padding:12px 14px;border:1px solid var(--line);}
+  .status-chip .n{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;}
+  .status-chip .l{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+
+  /* Forms */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-grid .full{grid-column:1 / -1;}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  input, select, textarea{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;
+    font-family:inherit;font-size:14px;background:#fff;color:var(--ink);
+  }
+  textarea{font-family:'IBM Plex Mono',monospace;font-size:13px;min-height:90px;resize:vertical;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--amber);outline-offset:1px;border-color:var(--amber);}
+  .field{margin-bottom:0;}
+  .checkline{display:flex;align-items:center;gap:8px;margin:4px 0 2px;}
+  .checkline input{width:auto;}
+
+  button.btn{
+    background:var(--amber);color:#1a1200;border:none;border-radius:8px;
+    padding:10px 18px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;
+  }
+  button.btn:hover{background:var(--amber-dark);color:#fff;}
+  button.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  button.btn.ghost:hover{background:var(--bg);}
+  button.btn.small{padding:6px 12px;font-size:12.5px;}
+
+  .msg{margin-top:12px;padding:10px 13px;border-radius:8px;font-size:13.5px;display:none;}
+  .msg.ok{display:block;background:#e8f6ee;color:var(--green);border:1px solid #bfe6cf;}
+  .msg.err{display:block;background:#fbeaea;color:var(--red);border:1px solid #f0c6c6;}
+
+  /* Filter bar */
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:16px;}
+  .filter-bar .field{min-width:160px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);
+     border-bottom:1px solid var(--line);padding:8px 10px;background:#fafbfc;}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);}
+  tr:hover td{background:#fafbfc;}
+  .sn-cell{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;}
+  .badge.Gudang{background:#e6effa;color:var(--blue);}
+  .badge.Terpasang{background:#e5f5ec;color:var(--green);}
+  .badge.Hilang{background:#fbeaea;color:var(--red);}
+  .badge.Rusak{background:#f1f1f2;color:var(--gray);}
+
+  .rowbtn{background:none;border:1px solid var(--line);border-radius:6px;padding:4px 9px;font-size:12px;cursor:pointer;font-family:inherit;}
+  .rowbtn:hover{background:var(--bg);}
+
+  .empty{color:var(--ink-soft);font-size:13.5px;padding:20px 4px;text-align:center;}
+
+  /* Modal */
+  #overlay{position:fixed;inset:0;background:rgba(20,24,32,.45);display:none;align-items:center;justify-content:center;z-index:50;}
+  #overlay.show{display:flex;}
+  #modal{background:#fff;border-radius:12px;padding:22px;width:400px;max-width:92vw;}
+  #modal h3{margin:0 0 14px;font-size:15px;}
+  #modal .field{margin-bottom:12px;}
+  #modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+  /* Trace */
+  .trace-detail{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px;}
+  .kv .k{color:var(--ink-soft);}
+  .kv .v{font-weight:600;}
+  .timeline{border-left:2px solid var(--line);padding-left:14px;margin-left:4px;}
+  .timeline .ev{position:relative;padding-bottom:16px;}
+  .timeline .ev::before{content:'';position:absolute;left:-19px;top:3px;width:9px;height:9px;border-radius:50%;background:var(--amber);}
+  .timeline .ev .t{font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .timeline .ev .d{font-size:13.5px;margin-top:2px;}
+
+  .config-banner{background:#fff4e8;border:1px solid #f0d3a8;color:#7a4a10;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:18px;}
+  .config-banner code{background:#fff;padding:1px 6px;border-radius:4px;}
+
+  @media (max-width:800px){
+    #app{flex-direction:column;}
+    #sidebar{width:100%;}
+    #sidebar nav{display:flex;overflow-x:auto;padding:8px;}
+    #sidebar nav button{white-space:nowrap;}
+    .form-grid{grid-template-columns:1fr;}
+    .trace-detail{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="sidebar">
+    <div class="brand">
+      <span class="tag">Inventaris</span>
+      <h1>Stok Gudang</h1>
+    </div>
+    <nav id="nav">
+      <button data-view="dashboard" class="active"><span class="num">01</span> Dashboard</button>
+      <button data-view="pembelian"><span class="num">02</span> Input Pembelian</button>
+      <button data-view="stok"><span class="num">03</span> Stok Barang</button>
+      <button data-view="trace"><span class="num">04</span> Trace S/N</button>
+      <button data-view="harga"><span class="num">05</span> Pedoman Harga</button>
+    </nav>
+    <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span></div>
+  </div>
+
+  <div id="main">
+
+    <div id="configBanner" class="config-banner" style="display:none;">
+      Backend belum tersambung. Buka file <code>app.html</code> ini di editor teks, lalu isi
+      <code>APPS_SCRIPT_URL</code> di bagian bawah dengan URL Web App hasil deploy Google Apps Script Anda
+      (lihat <code>Code.gs</code> untuk cara deploy).
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="view-header">
+        <h2>Dashboard</h2>
+        <p>Ringkasan stok gudang secara real-time.</p>
+      </div>
+      <div class="cards" id="dashCards"></div>
+      <div class="panel">
+        <h3>Stok per status</h3>
+        <div class="status-grid" id="statusGrid"></div>
+      </div>
+    </section>
+
+    <!-- INPUT PEMBELIAN -->
+    <section class="view" id="view-pembelian">
+      <div class="view-header">
+        <h2>Input Pembelian</h2>
+        <p>Setiap transaksi pembelian membentuk satu batch stok baru — walau kode barang &amp; toko sama, harga lama dan baru tetap tercatat terpisah.</p>
+      </div>
+      <div class="panel">
+        <form id="formPembelian">
+          <div class="form-grid">
+            <div class="field"><label>Tanggal Pembelian</label><input type="date" name="tanggal" required></div>
+            <div class="field"><label>Toko / Supplier</label><input type="text" name="toko" placeholder="mis. Toko Sinar Jaya" required></div>
+            <div class="field"><label>Kode Barang</label><input type="text" name="kode_barang" placeholder="mis. RTR-AX3000" required></div>
+            <div class="field"><label>Nama Barang</label><input type="text" name="nama_barang" placeholder="mis. Router AX3000" required></div>
+            <div class="field"><label>Harga Beli / Unit (Rp)</label><input type="number" min="0" name="harga_beli" required></div>
+            <div class="field"><label>Qty</label><input type="number" min="1" name="qty" id="qtyInput" required></div>
+            <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
+            <div class="field"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+          </div>
+
+          <div class="checkline" style="margin-top:14px;">
+            <input type="checkbox" id="chkManualSN">
+            <label style="margin:0;" for="chkManualSN">Saya sudah punya S/N fisik untuk unit-unit ini</label>
+          </div>
+          <div class="field full" id="snBox" style="display:none;margin-top:8px;">
+            <label>Daftar S/N (satu baris satu unit, jumlah baris harus sama dengan Qty)</label>
+            <textarea name="sn_list" placeholder="SN00123&#10;SN00124&#10;SN00125"></textarea>
+          </div>
+
+          <div style="margin-top:16px;">
+            <button type="submit" class="btn">Simpan Pembelian &amp; Buat Stok</button>
+          </div>
+          <div class="msg" id="msgPembelian"></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- STOK BARANG -->
+    <section class="view" id="view-stok">
+      <div class="view-header">
+        <h2>Stok Barang</h2>
+        <p>Daftar setiap unit fisik (per S/N) dan status terkininya.</p>
+      </div>
+      <div class="panel">
+        <div class="filter-bar">
+          <div class="field"><label>Status</label>
+            <select id="fStatus">
+              <option value="">Semua</option>
+              <option>Gudang</option>
+              <option>Terpasang</option>
+              <option>Hilang</option>
+              <option>Rusak</option>
+            </select>
+          </div>
+          <div class="field"><label>Kode Barang</label><input type="text" id="fKode" placeholder="mis. RTR-AX3000"></div>
+          <div class="field"><label>Toko</label><input type="text" id="fToko" placeholder="nama toko"></div>
+          <div class="field"><label>Cari S/N</label><input type="text" id="fSN" placeholder="ketik S/N"></div>
+          <button class="btn small" id="btnFilterStok">Terapkan</button>
+        </div>
+        <div id="stokTableWrap"><p class="empty">Memuat data...</p></div>
+      </div>
+    </section>
+
+    <!-- TRACE SN -->
+    <section class="view" id="view-trace">
+      <div class="view-header">
+        <h2>Trace S/N</h2>
+        <p>Lacak satu unit barang: dibeli dari toko mana, tanggal berapa, dan sekarang terpasang di mana.</p>
+      </div>
+      <div class="panel">
+        <div class="filter-bar">
+          <div class="field" style="flex:1;"><label>Nomor Seri (S/N)</label><input type="text" id="traceInput" placeholder="ketik atau scan S/N..."></div>
+          <button class="btn small" id="btnTrace">Lacak</button>
+        </div>
+      </div>
+      <div id="traceResult"></div>
+    </section>
+
+    <!-- PEDOMAN HARGA -->
+    <section class="view" id="view-harga">
+      <div class="view-header">
+        <h2>Pedoman Harga</h2>
+        <p>Bandingkan riwayat harga satu barang dari berbagai toko dan waktu pembelian.</p>
+      </div>
+      <div class="panel">
+        <div class="filter-bar">
+          <div class="field" style="flex:1;"><label>Kode Barang</label><input type="text" id="hargaKode" placeholder="mis. RTR-AX3000"></div>
+          <button class="btn small" id="btnHarga">Tampilkan</button>
+        </div>
+        <div id="hargaTableWrap"><p class="empty">Masukkan kode barang untuk melihat riwayat harga.</p></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="modal">
+    <h3>Ubah Status Unit</h3>
+    <div class="field"><label>S/N</label><input type="text" id="modalSN" readonly class="mono"></div>
+    <div class="field"><label>Status Baru</label>
+      <select id="modalStatus">
+        <option>Gudang</option>
+        <option>Terpasang</option>
+        <option>Hilang</option>
+        <option>Rusak</option>
+      </select>
+    </div>
+    <div class="field"><label>Lokasi (jika terpasang)</label><input type="text" id="modalLokasi" placeholder="mis. Kantor Klien - Lt 2"></div>
+    <div class="field"><label>Catatan</label><input type="text" id="modalCatatan" placeholder="opsional"></div>
+    <div class="actions">
+      <button class="btn ghost" id="modalCancel">Batal</button>
+      <button class="btn" id="modalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   KONFIGURASI
+   Ganti URL di bawah ini dengan URL Web App Google Apps
+   Script Anda (lihat Code.gs untuk cara deploy).
+   ========================================================= */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyL9ntcEzEM3wsswOA2crzHN57UW611D7CUX3gSrqvOS223bZ8zAd49RFtvej2VSc8I/exec";
+
+const configured = APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('https://script.google.com') === 0;
+
+async function apiGet(action, params={}){
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set('action', action);
+  Object.keys(params).forEach(k => { if(params[k]) url.searchParams.set(k, params[k]); });
+  const res = await fetch(url.toString());
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
+  return json.data;
+}
+
+async function apiPost(action, payload={}){
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method:'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'}, // hindari CORS preflight
+    body: JSON.stringify(Object.assign({action}, payload))
+  });
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
+  return json.data;
+}
+
+function rupiah(n){
+  n = Number(n)||0;
+  return 'Rp' + n.toLocaleString('id-ID');
+}
+function fmtTgl(v){
+  if(!v) return '-';
+  const d = new Date(v);
+  if(isNaN(d)) return v;
+  return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+}
+function fmtDT(v){
+  if(!v) return '-';
+  const d = new Date(v);
+  if(isNaN(d)) return v;
+  return d.toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+/* ---------- Navigasi ---------- */
+document.querySelectorAll('#nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view === 'dashboard') loadDashboard();
+    if(btn.dataset.view === 'stok') loadStok();
+  });
+});
+
+/* ---------- Cek koneksi ---------- */
+async function checkConn(){
+  const dot = document.getElementById('connDot');
+  const text = document.getElementById('connText');
+  const banner = document.getElementById('configBanner');
+  if(!configured){
+    dot.classList.remove('ok'); text.textContent = 'Belum dikonfigurasi';
+    banner.style.display = 'block';
+    return;
+  }
+  try{
+    await apiGet('ping');
+    dot.classList.add('ok'); text.textContent = 'Tersambung ke Google Sheet';
+    banner.style.display = 'none';
+  }catch(err){
+    dot.classList.remove('ok'); text.textContent = 'Gagal tersambung';
+    banner.style.display = 'block';
+    banner.textContent = 'Tidak bisa menghubungi backend: ' + err.message;
+  }
+}
+
+/* ---------- Dashboard ---------- */
+async function loadDashboard(){
+  if(!configured) return;
+  try{
+    const d = await apiGet('getDashboard');
+    document.getElementById('dashCards').innerHTML = `
+      <div class="card accent"><div class="label">Total Unit Stok</div><div class="value">${d.total_unit}</div></div>
+      <div class="card"><div class="label">Jenis Barang</div><div class="value">${d.total_jenis_barang}</div></div>
+      <div class="card"><div class="label">Nilai Stok di Gudang</div><div class="value">${rupiah(d.nilai_stok_gudang)}</div></div>
+    `;
+    const statuses = ['Gudang','Terpasang','Hilang','Rusak'];
+    document.getElementById('statusGrid').innerHTML = statuses.map(s=>`
+      <div class="status-chip"><div class="n">${d.per_status[s]||0}</div><div class="l">${s}</div></div>
+    `).join('');
+  }catch(err){
+    document.getElementById('dashCards').innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Input Pembelian ---------- */
+document.getElementById('chkManualSN').addEventListener('change', e=>{
+  document.getElementById('snBox').style.display = e.target.checked ? 'block' : 'none';
+});
+
+document.getElementById('formPembelian').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgPembelian');
+  msg.className = 'msg'; msg.style.display='none';
+  if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
+
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  if(document.getElementById('chkManualSN').checked){
+    payload.sn_list = payload.sn_list.split('\\n').map(s=>s.trim()).filter(Boolean);
+  } else {
+    delete payload.sn_list;
+  }
+
+  try{
+    const result = await apiPost('addPembelian', payload);
+    msg.className = 'msg ok';
+    msg.textContent = `Tersimpan. ID Pembelian: ${result.id_pembelian}. S/N dibuat: ${result.sn_dibuat.join(', ')}`;
+    e.target.reset();
+    document.getElementById('snBox').style.display='none';
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal menyimpan: ' + err.message;
+  }
+});
+
+/* ---------- Stok Barang ---------- */
+document.getElementById('btnFilterStok').addEventListener('click', loadStok);
+
+async function loadStok(){
+  const wrap = document.getElementById('stokTableWrap');
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getStok', {
+      status: document.getElementById('fStatus').value,
+      kode_barang: document.getElementById('fKode').value,
+      toko: document.getElementById('fToko').value,
+      sn: document.getElementById('fSN').value
+    });
+    if(rows.length === 0){ wrap.innerHTML = '<p class="empty">Tidak ada data.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>S/N</th><th>Kode</th><th>Nama Barang</th><th>Toko</th><th>Harga Beli</th>
+          <th>Tgl Beli</th><th>Status</th><th>Lokasi</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td class="sn-cell">${r.SN}</td>
+              <td>${r.Kode_Barang}</td>
+              <td>${r.Nama_Barang}</td>
+              <td>${r.Toko}</td>
+              <td>${rupiah(r.Harga_Beli)}</td>
+              <td>${fmtTgl(r.Tanggal_Beli)}</td>
+              <td><span class="badge ${r.Status}">${r.Status}</span></td>
+              <td>${r.Lokasi || '-'}</td>
+              <td><button class="rowbtn" onclick="openModal('${r.SN}')">Ubah</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Modal ubah status ---------- */
+function openModal(sn){
+  document.getElementById('modalSN').value = sn;
+  document.getElementById('modalStatus').value = 'Gudang';
+  document.getElementById('modalLokasi').value = '';
+  document.getElementById('modalCatatan').value = '';
+  document.getElementById('overlay').classList.add('show');
+}
+document.getElementById('modalCancel').addEventListener('click', ()=> document.getElementById('overlay').classList.remove('show'));
+document.getElementById('modalSave').addEventListener('click', async ()=>{
+  try{
+    await apiPost('updateStokStatus', {
+      sn: document.getElementById('modalSN').value,
+      status_baru: document.getElementById('modalStatus').value,
+      lokasi: document.getElementById('modalLokasi').value,
+      catatan: document.getElementById('modalCatatan').value
+    });
+    document.getElementById('overlay').classList.remove('show');
+    loadStok();
+    loadDashboard();
+  }catch(err){
+    alert('Gagal menyimpan: ' + err.message);
+  }
+});
+
+/* ---------- Trace S/N ---------- */
+document.getElementById('btnTrace').addEventListener('click', doTrace);
+document.getElementById('traceInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doTrace(); });
+
+async function doTrace(){
+  const wrap = document.getElementById('traceResult');
+  const sn = document.getElementById('traceInput').value.trim();
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  if(!sn){ return; }
+  wrap.innerHTML = '<p class="empty">Mencari...</p>';
+  try{
+    const d = await apiGet('traceSN', {sn});
+    if(!d.ditemukan){ wrap.innerHTML = '<p class="empty">S/N tidak ditemukan.</p>'; return; }
+    const s = d.stok, p = d.pembelian || {};
+    wrap.innerHTML = `
+      <div class="trace-detail">
+        <div class="panel">
+          <h3>Info Unit</h3>
+          <div class="kv"><span class="k">S/N</span><span class="v mono">${s.SN}</span></div>
+          <div class="kv"><span class="k">Kode / Nama Barang</span><span class="v">${s.Kode_Barang} — ${s.Nama_Barang}</span></div>
+          <div class="kv"><span class="k">Status Saat Ini</span><span class="v"><span class="badge ${s.Status}">${s.Status}</span></span></div>
+          <div class="kv"><span class="k">Lokasi Terpasang</span><span class="v">${s.Lokasi || '-'}</span></div>
+          <div class="kv"><span class="k">Terakhir Diupdate</span><span class="v">${fmtDT(s.Tanggal_Update)}</span></div>
+        </div>
+        <div class="panel">
+          <h3>Asal Pembelian</h3>
+          <div class="kv"><span class="k">Toko</span><span class="v">${s.Toko}</span></div>
+          <div class="kv"><span class="k">Tanggal Beli</span><span class="v">${fmtTgl(s.Tanggal_Beli)}</span></div>
+          <div class="kv"><span class="k">Harga Beli</span><span class="v">${rupiah(s.Harga_Beli)}</span></div>
+          <div class="kv"><span class="k">No. Referensi</span><span class="v">${p.No_Referensi || '-'}</span></div>
+          <div class="kv"><span class="k">ID Pembelian</span><span class="v mono">${s.ID_Pembelian}</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Riwayat Perubahan</h3>
+        ${d.riwayat.length===0 ? '<p class="empty">Belum ada perubahan status sejak dibeli.</p>' : `
+          <div class="timeline">
+            ${d.riwayat.map(l=>`
+              <div class="ev">
+                <div class="t">${fmtDT(l.Timestamp)}</div>
+                <div class="d">${l.Status_Lama || '-'} → <strong>${l.Status_Baru}</strong>${l.Lokasi ? ' di ' + l.Lokasi : ''}${l.Keterangan ? ' — ' + l.Keterangan : ''}</div>
+              </div>
+            `).join('')}
+          </div>`}
+      </div>
+    `;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal mencari: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Pedoman Harga ---------- */
+document.getElementById('btnHarga').addEventListener('click', loadHarga);
+document.getElementById('hargaKode').addEventListener('keydown', e=>{ if(e.key==='Enter') loadHarga(); });
+
+async function loadHarga(){
+  const wrap = document.getElementById('hargaTableWrap');
+  const kode = document.getElementById('hargaKode').value.trim();
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  if(!kode){ return; }
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getHargaBanding', {kode_barang: kode});
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada riwayat pembelian untuk kode ini.</p>'; return; }
+    const harga = rows.map(r=>Number(r.Harga_Beli));
+    const min = Math.min(...harga), max = Math.max(...harga);
+    wrap.innerHTML = `
+      <div class="cards" style="margin-bottom:16px;">
+        <div class="card"><div class="label">Harga Termurah Tercatat</div><div class="value">${rupiah(min)}</div></div>
+        <div class="card"><div class="label">Harga Tertinggi Tercatat</div><div class="value">${rupiah(max)}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Tanggal</th><th>Toko</th><th>Harga Beli</th><th>Qty</th><th>No. Referensi</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td>${fmtTgl(r.Tanggal)}</td>
+              <td>${r.Toko}</td>
+              <td>${rupiah(r.Harga_Beli)}${Number(r.Harga_Beli)===min?' <span class="badge Terpasang">termurah</span>':''}</td>
+              <td>${r.Qty}</td>
+              <td>${r.No_Referensi || '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Init ---------- */
+checkConn().then(()=>{ loadDashboard(); });
+</script>
+</body>
+</html>
