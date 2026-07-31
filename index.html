@@ -610,11 +610,19 @@ document.querySelectorAll('#nav button').forEach(btn=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.getElementById('view-'+btn.dataset.view).classList.add('active');
     if(btn.dataset.view === 'dashboard') loadDashboard();
-    if(btn.dataset.view === 'stok') loadStok();
+    if(btn.dataset.view === 'stok'){ loadStok(); ensureSNLoaded(); }
     if(btn.dataset.view === 'inventaris') loadInventaris();
+    if(btn.dataset.view === 'trace') ensureSNLoaded();
     if(btn.dataset.view === 'log') loadLog();
   });
 });
+
+let snListLoaded = false;
+function ensureSNLoaded(){
+  if(snListLoaded) return;
+  snListLoaded = true;
+  loadAllSN();
+}
 
 /* ---------- Cek koneksi ---------- */
 async function checkConn(){
@@ -638,19 +646,23 @@ async function checkConn(){
 }
 
 /* ---------- Dashboard ---------- */
+function renderDashboard(d){
+  document.getElementById('dashCards').innerHTML = `
+    <div class="card accent"><div class="label">Total Unit Stok</div><div class="value">${d.total_unit}</div></div>
+    <div class="card"><div class="label">Jenis Barang</div><div class="value">${d.total_jenis_barang}</div></div>
+    ${currentCanSeeHarga ? `<div class="card"><div class="label">Nilai Stok di Gudang</div><div class="value">${rupiah(d.nilai_stok_gudang)}</div></div>` : ''}
+  `;
+  const statuses = ['Gudang','Terpasang','Hilang','Rusak'];
+  document.getElementById('statusGrid').innerHTML = statuses.map(s=>`
+    <div class="status-chip"><div class="n">${d.per_status[s]||0}</div><div class="l">${s}</div></div>
+  `).join('');
+}
+
 async function loadDashboard(){
   if(!configured) return;
   try{
     const d = await apiGet('getDashboard');
-    document.getElementById('dashCards').innerHTML = `
-      <div class="card accent"><div class="label">Total Unit Stok</div><div class="value">${d.total_unit}</div></div>
-      <div class="card"><div class="label">Jenis Barang</div><div class="value">${d.total_jenis_barang}</div></div>
-      ${currentCanSeeHarga ? `<div class="card"><div class="label">Nilai Stok di Gudang</div><div class="value">${rupiah(d.nilai_stok_gudang)}</div></div>` : ''}
-    `;
-    const statuses = ['Gudang','Terpasang','Hilang','Rusak'];
-    document.getElementById('statusGrid').innerHTML = statuses.map(s=>`
-      <div class="status-chip"><div class="n">${d.per_status[s]||0}</div><div class="l">${s}</div></div>
-    `).join('');
+    renderDashboard(d);
   }catch(err){
     document.getElementById('dashCards').innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
   }
@@ -1318,19 +1330,21 @@ async function doLogin(){
   APP_TOKEN = kode;
   currentUser = nama;
   try{
-    await apiGet('ping'); // sekadar cek koneksi dasar
-    // Verifikasi token dengan memanggil endpoint yang butuh auth
-    await apiGet('getDashboard');
-    await apiPost('recordLogin', {}); // catat login (nama sudah otomatis terlampir lewat apiPost)
+    // Satu panggilan ini sekaligus berfungsi sebagai verifikasi kode akses
+    // DAN sumber data dashboard — tidak perlu fetch dashboard kedua kalinya.
+    const dash = await apiGet('getDashboard');
     document.getElementById('navLog').style.display = currentIsAdmin ? 'flex' : 'none';
     document.getElementById('navPembelian').style.display = currentCanSeeHarga ? 'flex' : 'none';
     document.getElementById('navHarga').style.display = currentCanSeeHarga ? 'flex' : 'none';
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
-    checkConn();
-    loadDashboard();
+    renderDashboard(dash);
+    document.getElementById('connDot').classList.add('ok');
+    document.getElementById('connText').textContent = 'Tersambung ke Google Sheet';
+    // Tidak ditunggu (tidak pakai await) supaya tidak menahan tampilan —
+    // jalan di belakang layar setelah aplikasi sudah tampil.
+    apiPost('recordLogin', {}).catch(()=>{});
     loadMasterBarang();
-    loadAllSN();
   }catch(err){
     APP_TOKEN = null;
     currentUser = null;
