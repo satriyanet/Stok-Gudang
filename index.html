@@ -300,6 +300,15 @@
               <input type="hidden" name="harga_beli" id="saHargaBeli" value="0">
               <div class="field"><label>Jumlah / Satuan</label><input type="number" min="1" name="qty" id="saQty" required></div>
               <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box" autocomplete="off"></div>
+              <div class="field"><label>Status</label>
+                <select name="status" id="saStatus">
+                  <option value="Gudang">Gudang</option>
+                  <option value="Terpasang">Terpasang</option>
+                  <option value="Hilang">Hilang</option>
+                  <option value="Rusak">Rusak</option>
+                </select>
+              </div>
+              <div class="field" id="saLokasiBox" style="display:none;"><label>Lokasi</label><input type="text" name="lokasi" id="saLokasi" placeholder="mis. Kantor Klien - Lt 2"></div>
               <div class="field"><label>Kategori</label><input type="text" name="kategori" id="saKategori" list="dlKategori" placeholder="opsional" autocomplete="off"></div>
               <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
               <div class="field full"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
@@ -709,6 +718,16 @@ document.getElementById('btnToggleTambahStok').addEventListener('click', ()=>{
 document.getElementById('btnBatalTambahStok').addEventListener('click', ()=>{
   document.getElementById('formStokManual').reset();
   document.getElementById('tambahStokBox').style.display = 'none';
+  document.getElementById('saLokasiBox').style.display = 'none';
+});
+document.getElementById('saStatus').addEventListener('change', e=>{
+  const box = document.getElementById('saLokasiBox');
+  if(e.target.value === 'Gudang'){
+    box.style.display = 'none';
+    document.getElementById('saLokasi').value = '';
+  } else {
+    box.style.display = 'block';
+  }
 });
 
 document.getElementById('formStokManual').addEventListener('submit', async e=>{
