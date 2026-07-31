@@ -326,6 +326,38 @@
       </div>
 
       <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Barang Keluar / Pengambilan Barang</h3>
+          <button class="btn small" id="btnToggleKeluar">+ Barang Keluar</button>
+        </div>
+        <div id="keluarBox" style="display:none;margin-top:16px;">
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">Pilih jenis barang, lalu centang S/N spesifik yang diambil (disarankan, agar mudah ditrace). Kalau barang ini tidak perlu dibedakan per S/N, biarkan tidak dicentang dan isi Jumlah saja — sistem otomatis memilih dari yang paling lama masuk.</p>
+          <form id="formKeluar">
+            <div class="form-grid">
+              <div class="field full">
+                <label>Jenis Barang</label>
+                <select name="kode_barang" id="kKodeBarang" required>
+                  <option value="">Pilih barang yang tersedia di Gudang...</option>
+                </select>
+              </div>
+              <div class="field full" id="kSNListBox" style="display:none;">
+                <label>Pilih S/N (opsional — centang unit yang diambil)</label>
+                <div id="kSNListItems" style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:10px;"></div>
+              </div>
+              <div class="field"><label>Jumlah (isi hanya jika tidak memilih S/N di atas)</label><input type="number" min="1" name="jumlah" id="kJumlah"></div>
+              <div class="field"><label>Diambil Untuk / Lokasi Tujuan</label><input type="text" name="lokasi" placeholder="mis. Kantor Klien - Lt 2 / Tim Instalasi A" required></div>
+              <div class="field full"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+            </div>
+            <div style="margin-top:16px;">
+              <button type="submit" class="btn">Catat Pengambilan</button>
+              <button type="button" class="btn ghost" id="btnBatalKeluar">Batal</button>
+            </div>
+            <div class="msg" id="msgKeluar"></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
         <div class="filter-bar">
           <div class="field"><label>Status</label>
             <select id="fStatus">
@@ -375,6 +407,7 @@
           <form id="formAlat">
             <div class="form-grid">
               <div class="field"><label>Nama Alat</label><input type="text" name="nama_alat" id="alatNama" list="dlNamaAlat" placeholder="mis. Obeng Set" required autocomplete="off"></div>
+              <div class="field"><label>Jumlah</label><input type="number" min="1" name="jumlah" id="alatJumlah" value="1" required></div>
               <div class="field"><label>Lokasi</label><input type="text" name="lokasi" id="alatLokasi" list="dlLokasiAlat" placeholder="Tas Tools Kerja / Tas Tools Kantor / Gudang" required autocomplete="off"></div>
               <div class="field"><label>Kondisi</label>
                 <select name="kondisi" required>
@@ -414,6 +447,7 @@
             <button class="btn small" id="btnFilterAlat">Terapkan</button>
             <button class="btn ghost small" id="btnExportAlat">Export CSV</button>
           </div>
+          <p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px;">Total unit sesuai filter: <strong id="alatTotalUnit">0</strong></p>
           <div id="alatTableWrap"><p class="empty">Memuat data...</p></div>
         </div>
       </div>
@@ -488,6 +522,7 @@
   <div id="modalAlat">
     <h3>Ubah Data Alat</h3>
     <div class="field"><label>Nama Alat</label><input type="text" id="modalAlatNama" readonly></div>
+    <div class="field"><label>Jumlah</label><input type="number" min="1" id="modalAlatJumlah"></div>
     <div class="field"><label>Lokasi</label><input type="text" id="modalAlatLokasi" list="dlLokasiAlat" autocomplete="off"></div>
     <div class="field"><label>Kondisi</label>
       <select id="modalAlatKondisi">
@@ -751,6 +786,98 @@ document.getElementById('formStokManual').addEventListener('submit', async e=>{
   }
 });
 
+/* ---------- Barang Keluar / Pengambilan Barang ---------- */
+document.getElementById('btnToggleKeluar').addEventListener('click', ()=>{
+  const box = document.getElementById('keluarBox');
+  const willShow = box.style.display === 'none';
+  box.style.display = willShow ? 'block' : 'none';
+  if(willShow) loadBarangTersediaUntukKeluar();
+});
+document.getElementById('btnBatalKeluar').addEventListener('click', ()=>{
+  document.getElementById('formKeluar').reset();
+  document.getElementById('keluarBox').style.display = 'none';
+  document.getElementById('kSNListBox').style.display = 'none';
+  document.getElementById('kSNListItems').innerHTML = '';
+});
+
+async function loadBarangTersediaUntukKeluar(){
+  const sel = document.getElementById('kKodeBarang');
+  sel.innerHTML = '<option value="">Memuat...</option>';
+  document.getElementById('kSNListBox').style.display = 'none';
+  document.getElementById('kSNListItems').innerHTML = '';
+  try{
+    const rows = await apiGet('getInventarisRingkasan');
+    const tersedia = rows.filter(r => (r.per_status.Gudang||0) > 0);
+    if(tersedia.length === 0){
+      sel.innerHTML = '<option value="">Tidak ada barang tersedia di Gudang</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Pilih barang yang tersedia di Gudang...</option>' +
+      tersedia.map(r=>`<option value="${r.kode_barang}">${r.nama_barang} (${r.kode_barang}) — tersedia: ${r.per_status.Gudang}</option>`).join('');
+  }catch(err){
+    sel.innerHTML = '<option value="">Gagal memuat daftar barang</option>';
+  }
+}
+
+document.getElementById('kKodeBarang').addEventListener('change', async e=>{
+  const box = document.getElementById('kSNListBox');
+  const listEl = document.getElementById('kSNListItems');
+  const kode = e.target.value;
+  if(!kode){ box.style.display = 'none'; listEl.innerHTML = ''; return; }
+  listEl.innerHTML = 'Memuat daftar S/N...';
+  box.style.display = 'block';
+  try{
+    const rows = await apiGet('getStok', {kode_barang: kode, status: 'Gudang'});
+    if(rows.length === 0){
+      listEl.innerHTML = '<span class="empty">Tidak ada unit tersedia.</span>';
+      return;
+    }
+    listEl.innerHTML = rows.map(r=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13.5px;">
+        <input type="checkbox" name="sn_pilih" value="${r.SN}" style="width:auto;">
+        <span class="mono">${r.SN}</span>
+        <span style="color:var(--ink-soft);">— masuk ${fmtTgl(r.Tanggal_Beli)}</span>
+      </label>
+    `).join('');
+  }catch(err){
+    listEl.innerHTML = `<span class="empty">Gagal memuat: ${err.message}</span>`;
+  }
+});
+
+document.getElementById('formKeluar').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgKeluar');
+  msg.className = 'msg'; msg.style.display='none';
+  if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
+
+  const fd = new FormData(e.target);
+  const payload = { kode_barang: fd.get('kode_barang'), lokasi: fd.get('lokasi'), catatan: fd.get('catatan') };
+  const snPilih = Array.from(document.querySelectorAll('input[name="sn_pilih"]:checked')).map(el=>el.value);
+
+  if(snPilih.length > 0){
+    payload.sn_list = snPilih;
+  } else {
+    const jumlah = fd.get('jumlah');
+    if(!jumlah){ msg.className='msg err'; msg.textContent='Pilih S/N secara manual, atau isi Jumlah.'; return; }
+    payload.jumlah = jumlah;
+  }
+
+  try{
+    const result = await apiPost('keluarBarang', payload);
+    msg.className = 'msg ok';
+    msg.textContent = `Tercatat. S/N yang diambil: ${result.sn_diambil.join(', ')}`;
+    e.target.reset();
+    document.getElementById('kSNListBox').style.display = 'none';
+    document.getElementById('kSNListItems').innerHTML = '';
+    loadStok();
+    loadDashboard();
+    loadBarangTersediaUntukKeluar();
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal mencatat: ' + err.message;
+  }
+});
+
 /* ---------- Input Pembelian ---------- */
 document.getElementById('chkManualSN').addEventListener('change', e=>{
   document.getElementById('snBox').style.display = e.target.checked ? 'block' : 'none';
@@ -965,14 +1092,17 @@ async function loadAlat(){
     lastAlatRows = rows;
     rows.forEach(r=>{ if(r.Lokasi) alatLokasiSet.add(r.Lokasi); if(r.Nama_Alat) alatNamaSet.add(r.Nama_Alat); });
     refreshAlatSuggestions();
+    const totalUnit = rows.reduce((sum, r) => sum + (parseInt(r.Jumlah, 10) || 0), 0);
+    document.getElementById('alatTotalUnit').textContent = totalUnit;
     if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada alat tercatat.</p>'; return; }
     wrap.innerHTML = `
       <table>
-        <thead><tr><th>Nama Alat</th><th>Lokasi</th><th>Kondisi</th><th>Catatan</th><th>Diperbarui</th><th></th></tr></thead>
+        <thead><tr><th>Nama Alat</th><th>Jumlah</th><th>Lokasi</th><th>Kondisi</th><th>Catatan</th><th>Diperbarui</th><th></th></tr></thead>
         <tbody>
           ${rows.map(r=>`
             <tr>
               <td><strong>${r.Nama_Alat}</strong></td>
+              <td>${r.Jumlah || 1}</td>
               <td>${r.Lokasi}</td>
               <td><span class="badge ${r.Kondisi}">${r.Kondisi}</span></td>
               <td>${r.Catatan || '-'}</td>
@@ -1012,6 +1142,7 @@ document.getElementById('btnExportAlat').addEventListener('click', ()=>{
   if(lastAlatRows.length===0){ alert('Belum ada data untuk diexport. Klik "Terapkan" dulu.'); return; }
   exportCSV('daftar-alat.csv', [
     {label:'Nama Alat', value:'Nama_Alat'},
+    {label:'Jumlah', value:'Jumlah'},
     {label:'Lokasi', value:'Lokasi'},
     {label:'Kondisi', value:'Kondisi'},
     {label:'Catatan', value:'Catatan'},
@@ -1026,6 +1157,7 @@ function openModalAlat(idAlat){
   if(!item) return;
   document.getElementById('modalAlat').dataset.id = idAlat;
   document.getElementById('modalAlatNama').value = item.Nama_Alat;
+  document.getElementById('modalAlatJumlah').value = item.Jumlah || 1;
   document.getElementById('modalAlatLokasi').value = item.Lokasi;
   document.getElementById('modalAlatKondisi').value = item.Kondisi;
   document.getElementById('modalAlatCatatan').value = item.Catatan || '';
@@ -1036,6 +1168,7 @@ document.getElementById('modalAlatSave').addEventListener('click', async ()=>{
   try{
     await apiPost('updateAlat', {
       id_alat: document.getElementById('modalAlat').dataset.id,
+      jumlah: document.getElementById('modalAlatJumlah').value,
       lokasi: document.getElementById('modalAlatLokasi').value,
       kondisi: document.getElementById('modalAlatKondisi').value,
       catatan: document.getElementById('modalAlatCatatan').value
