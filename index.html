@@ -116,6 +116,15 @@
 
   /* Filter bar */
   .filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:16px;}
+
+  .subnav{display:flex;gap:8px;margin-bottom:18px;}
+  .subnav-btn{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink-soft);}
+  .subnav-btn:hover{background:var(--bg);}
+  .subnav-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .subview{display:none;}
+  .subview.active{display:block;}
+  .badge.Bagus{background:#e5f5ec;color:var(--green);}
+  .badge.Dipinjam{background:#fff4e2;color:var(--amber-dark);}
   .filter-bar .field{min-width:160px;}
 
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
@@ -137,12 +146,12 @@
   .empty{color:var(--ink-soft);font-size:13.5px;padding:20px 4px;text-align:center;}
 
   /* Modal */
-  #overlay{position:fixed;inset:0;background:rgba(20,24,32,.45);display:none;align-items:center;justify-content:center;z-index:50;}
-  #overlay.show{display:flex;}
-  #modal{background:#fff;border-radius:12px;padding:22px;width:400px;max-width:92vw;}
-  #modal h3{margin:0 0 14px;font-size:15px;}
-  #modal .field{margin-bottom:12px;}
-  #modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  #overlay, #overlayAlat{position:fixed;inset:0;background:rgba(20,24,32,.45);display:none;align-items:center;justify-content:center;z-index:50;}
+  #overlay.show, #overlayAlat.show{display:flex;}
+  #modal, #modalAlat{background:#fff;border-radius:12px;padding:22px;width:400px;max-width:92vw;}
+  #modal h3, #modalAlat h3{margin:0 0 14px;font-size:15px;}
+  #modal .field, #modalAlat .field{margin-bottom:12px;}
+  #modal .actions, #modalAlat .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 
   /* Trace */
   .trace-detail{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -192,9 +201,10 @@
       <button data-view="dashboard" class="active"><span class="num">01</span> Dashboard</button>
       <button data-view="pembelian"><span class="num">02</span> Input Pembelian</button>
       <button data-view="stok"><span class="num">03</span> Stok Barang</button>
-      <button data-view="trace"><span class="num">04</span> Trace S/N</button>
-      <button data-view="harga"><span class="num">05</span> Pedoman Harga</button>
-      <button data-view="log" id="navLog" style="display:none;"><span class="num">06</span> Log Aktivitas</button>
+      <button data-view="inventaris"><span class="num">04</span> Inventaris</button>
+      <button data-view="trace"><span class="num">05</span> Trace S/N</button>
+      <button data-view="harga"><span class="num">06</span> Pedoman Harga</button>
+      <button data-view="log" id="navLog" style="display:none;"><span class="num">07</span> Log Aktivitas</button>
     </nav>
     <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span></div>
   </div>
@@ -227,16 +237,20 @@
         <p>Setiap transaksi pembelian membentuk satu batch stok baru — walau kode barang &amp; toko sama, harga lama dan baru tetap tercatat terpisah.</p>
       </div>
       <div class="panel">
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 14px;">Jenis barang yang sudah pernah dibeli akan muncul sebagai saran saat mengetik — tinggal pilih, tidak perlu mengetik ulang. Kalau jenis barang baru, cukup ketik seperti biasa, nanti otomatis tersimpan untuk pembelian berikutnya.</p>
         <form id="formPembelian">
           <div class="form-grid">
             <div class="field"><label>Tanggal Pembelian</label><input type="date" name="tanggal" required></div>
             <div class="field"><label>Toko / Supplier</label><input type="text" name="toko" placeholder="mis. Toko Sinar Jaya" required></div>
-            <div class="field"><label>Kode Barang</label><input type="text" name="kode_barang" placeholder="mis. RTR-AX3000" required></div>
-            <div class="field"><label>Nama Barang</label><input type="text" name="nama_barang" placeholder="mis. Router AX3000" required></div>
+            <div class="field"><label>Kode Barang</label><input type="text" name="kode_barang" id="pKodeBarang" list="dlKode" placeholder="mis. RTR-AX3000, atau pilih dari daftar" required autocomplete="off"></div>
+            <div class="field"><label>Nama Barang</label><input type="text" name="nama_barang" id="pNamaBarang" list="dlNama" placeholder="mis. Router AX3000, atau pilih dari daftar" required autocomplete="off"></div>
+            <div class="field"><label>Merk Barang</label><input type="text" name="merk" id="pMerk" list="dlMerk" placeholder="mis. TP-Link, atau pilih dari daftar" autocomplete="off"></div>
             <div class="field"><label>Harga Beli / Unit (Rp)</label><input type="number" min="0" name="harga_beli" required></div>
             <div class="field"><label>Qty</label><input type="number" min="1" name="qty" id="qtyInput" required></div>
             <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
             <div class="field"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+            <div class="field"><label>Kategori</label><input type="text" name="kategori" id="pKategori" list="dlKategori" placeholder="opsional, mis. Jaringan" autocomplete="off"></div>
+            <div class="field"><label>Satuan</label><input type="text" name="satuan" id="pSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box" autocomplete="off"></div>
           </div>
 
           <div class="checkline" style="margin-top:14px;">
@@ -253,6 +267,12 @@
           </div>
           <div class="msg" id="msgPembelian"></div>
         </form>
+        <datalist id="dlKode"></datalist>
+        <datalist id="dlNama"></datalist>
+        <datalist id="dlMerk"></datalist>
+        <datalist id="dlKategori"></datalist>
+        <datalist id="dlSatuan"></datalist>
+        <datalist id="dlSN"></datalist>
       </div>
     </section>
 
@@ -273,12 +293,86 @@
               <option>Rusak</option>
             </select>
           </div>
-          <div class="field"><label>Kode Barang</label><input type="text" id="fKode" placeholder="mis. RTR-AX3000"></div>
+          <div class="field"><label>Kode Barang</label><select id="fKode"><option value="">Semua</option></select></div>
           <div class="field"><label>Toko</label><input type="text" id="fToko" placeholder="nama toko"></div>
-          <div class="field"><label>Cari S/N</label><input type="text" id="fSN" placeholder="ketik S/N"></div>
+          <div class="field"><label>Cari S/N</label><input type="text" id="fSN" list="dlSN" placeholder="ketik S/N" autocomplete="off"></div>
           <button class="btn small" id="btnFilterStok">Terapkan</button>
+          <button class="btn ghost small" id="btnExportStok">Export CSV</button>
         </div>
         <div id="stokTableWrap"><p class="empty">Memuat data...</p></div>
+      </div>
+    </section>
+
+    <!-- INVENTARIS -->
+    <section class="view" id="view-inventaris">
+      <div class="view-header">
+        <h2>Inventaris</h2>
+        <p>Ringkasan stok barang dan daftar alat/perkakas kerja.</p>
+      </div>
+
+      <div class="subnav">
+        <button class="subnav-btn active" data-sub="ringkasan">Ringkasan Barang</button>
+        <button class="subnav-btn" data-sub="alat">Daftar Alat</button>
+      </div>
+
+      <!-- Sub: Ringkasan Barang -->
+      <div class="subview active" id="sub-ringkasan">
+        <div class="panel">
+          <div class="filter-bar">
+            <button class="btn ghost small" id="btnExportInventaris">Export CSV</button>
+          </div>
+          <div id="inventarisTableWrap"><p class="empty">Memuat data...</p></div>
+        </div>
+      </div>
+
+      <!-- Sub: Daftar Alat -->
+      <div class="subview" id="sub-alat">
+        <div class="panel">
+          <h3>Tambah Alat</h3>
+          <form id="formAlat">
+            <div class="form-grid">
+              <div class="field"><label>Nama Alat</label><input type="text" name="nama_alat" id="alatNama" list="dlNamaAlat" placeholder="mis. Obeng Set" required autocomplete="off"></div>
+              <div class="field"><label>Lokasi</label><input type="text" name="lokasi" id="alatLokasi" list="dlLokasiAlat" placeholder="Tas Tools Kerja / Tas Tools Kantor / Gudang" required autocomplete="off"></div>
+              <div class="field"><label>Kondisi</label>
+                <select name="kondisi" required>
+                  <option value="">Pilih kondisi</option>
+                  <option>Bagus</option>
+                  <option>Rusak</option>
+                  <option>Hilang</option>
+                  <option>Dipinjam</option>
+                </select>
+              </div>
+              <div class="field"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+            </div>
+            <div style="margin-top:16px;"><button type="submit" class="btn">Simpan Alat</button></div>
+            <div class="msg" id="msgAlat"></div>
+          </form>
+          <datalist id="dlNamaAlat"></datalist>
+          <datalist id="dlLokasiAlat">
+            <option value="Tas Tools Kerja"></option>
+            <option value="Tas Tools Kantor"></option>
+            <option value="Gudang"></option>
+          </datalist>
+        </div>
+
+        <div class="panel">
+          <div class="filter-bar">
+            <div class="field"><label>Lokasi</label><select id="fAlatLokasi"><option value="">Semua</option></select></div>
+            <div class="field"><label>Kondisi</label>
+              <select id="fAlatKondisi">
+                <option value="">Semua</option>
+                <option>Bagus</option>
+                <option>Rusak</option>
+                <option>Hilang</option>
+                <option>Dipinjam</option>
+              </select>
+            </div>
+            <div class="field"><label>Cari Nama</label><input type="text" id="fAlatCari" placeholder="cari nama alat"></div>
+            <button class="btn small" id="btnFilterAlat">Terapkan</button>
+            <button class="btn ghost small" id="btnExportAlat">Export CSV</button>
+          </div>
+          <div id="alatTableWrap"><p class="empty">Memuat data...</p></div>
+        </div>
       </div>
     </section>
 
@@ -290,7 +384,7 @@
       </div>
       <div class="panel">
         <div class="filter-bar">
-          <div class="field" style="flex:1;"><label>Nomor Seri (S/N)</label><input type="text" id="traceInput" placeholder="ketik atau scan S/N..."></div>
+          <div class="field" style="flex:1;"><label>Nomor Seri (S/N)</label><input type="text" id="traceInput" list="dlSN" placeholder="ketik atau scan S/N..." autocomplete="off"></div>
           <button class="btn small" id="btnTrace">Lacak</button>
         </div>
       </div>
@@ -305,7 +399,7 @@
       </div>
       <div class="panel">
         <div class="filter-bar">
-          <div class="field" style="flex:1;"><label>Kode Barang</label><input type="text" id="hargaKode" placeholder="mis. RTR-AX3000"></div>
+          <div class="field" style="flex:1;"><label>Kode Barang</label><input type="text" id="hargaKode" list="dlKode" placeholder="mis. RTR-AX3000, atau pilih dari daftar" autocomplete="off"></div>
           <button class="btn small" id="btnHarga">Tampilkan</button>
         </div>
         <div id="hargaTableWrap"><p class="empty">Masukkan kode barang untuk melihat riwayat harga.</p></div>
@@ -343,6 +437,27 @@
     <div class="actions">
       <button class="btn ghost" id="modalCancel">Batal</button>
       <button class="btn" id="modalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="overlayAlat">
+  <div id="modalAlat">
+    <h3>Ubah Data Alat</h3>
+    <div class="field"><label>Nama Alat</label><input type="text" id="modalAlatNama" readonly></div>
+    <div class="field"><label>Lokasi</label><input type="text" id="modalAlatLokasi" list="dlLokasiAlat" autocomplete="off"></div>
+    <div class="field"><label>Kondisi</label>
+      <select id="modalAlatKondisi">
+        <option>Bagus</option>
+        <option>Rusak</option>
+        <option>Hilang</option>
+        <option>Dipinjam</option>
+      </select>
+    </div>
+    <div class="field"><label>Catatan</label><input type="text" id="modalAlatCatatan" placeholder="opsional"></div>
+    <div class="actions">
+      <button class="btn ghost" id="modalAlatCancel">Batal</button>
+      <button class="btn" id="modalAlatSave">Simpan</button>
     </div>
   </div>
 </div>
@@ -415,6 +530,7 @@ document.querySelectorAll('#nav button').forEach(btn=>{
     document.getElementById('view-'+btn.dataset.view).classList.add('active');
     if(btn.dataset.view === 'dashboard') loadDashboard();
     if(btn.dataset.view === 'stok') loadStok();
+    if(btn.dataset.view === 'inventaris') loadInventaris();
     if(btn.dataset.view === 'log') loadLog();
   });
 });
@@ -459,6 +575,70 @@ async function loadDashboard(){
   }
 }
 
+/* ---------- Master Barang (jenis barang) ---------- */
+let masterKodeToNama = {};
+let masterNamaToKode = {};
+let masterByKode = {};
+
+async function loadMasterBarang(){
+  try{
+    const rows = await apiGet('getMasterBarang');
+    masterKodeToNama = {};
+    masterNamaToKode = {};
+    masterByKode = {};
+    const kategoriSet = new Set();
+    const satuanSet = new Set();
+    const merkSet = new Set();
+    rows.forEach(r=>{
+      masterKodeToNama[r.Kode_Barang] = r.Nama_Barang;
+      masterNamaToKode[r.Nama_Barang] = r.Kode_Barang;
+      masterByKode[r.Kode_Barang] = r;
+      if(r.Kategori) kategoriSet.add(r.Kategori);
+      if(r.Satuan) satuanSet.add(r.Satuan);
+      if(r.Merk) merkSet.add(r.Merk);
+    });
+
+    document.getElementById('dlKode').innerHTML = rows.map(r=>`<option value="${r.Kode_Barang}">${r.Nama_Barang}</option>`).join('');
+    document.getElementById('dlNama').innerHTML = rows.map(r=>`<option value="${r.Nama_Barang}">${r.Kode_Barang}</option>`).join('');
+    document.getElementById('dlKategori').innerHTML = [...kategoriSet].map(k=>`<option value="${k}"></option>`).join('');
+    document.getElementById('dlSatuan').innerHTML = [...satuanSet].map(s=>`<option value="${s}"></option>`).join('');
+    document.getElementById('dlMerk').innerHTML = [...merkSet].map(m=>`<option value="${m}"></option>`).join('');
+
+    const fKode = document.getElementById('fKode');
+    const prevVal = fKode.value;
+    fKode.innerHTML = '<option value="">Semua</option>' + rows.map(r=>`<option value="${r.Kode_Barang}">${r.Kode_Barang} — ${r.Nama_Barang}</option>`).join('');
+    fKode.value = prevVal;
+  }catch(err){
+    // Gagal memuat daftar jenis barang tidak menghentikan aplikasi, cukup diabaikan (field tetap bisa diisi manual)
+  }
+}
+
+async function loadAllSN(){
+  try{
+    const sns = await apiGet('getAllSN');
+    document.getElementById('dlSN').innerHTML = sns.map(sn=>`<option value="${sn}"></option>`).join('');
+  }catch(err){
+    // Diabaikan — field S/N tetap bisa diisi manual tanpa saran
+  }
+}
+
+function fillFromMaster(kode){
+  const m = masterByKode[kode];
+  if(!m) return;
+  document.getElementById('pNamaBarang').value = m.Nama_Barang;
+  if(m.Merk) document.getElementById('pMerk').value = m.Merk;
+  if(m.Kategori) document.getElementById('pKategori').value = m.Kategori;
+  if(m.Satuan) document.getElementById('pSatuan').value = m.Satuan;
+}
+
+document.getElementById('pKodeBarang').addEventListener('input', e=>{
+  if(masterKodeToNama[e.target.value]) fillFromMaster(e.target.value);
+});
+document.getElementById('pNamaBarang').addEventListener('input', e=>{
+  const kode = masterNamaToKode[e.target.value];
+  if(kode){ document.getElementById('pKodeBarang').value = kode; fillFromMaster(kode); }
+});
+
 /* ---------- Input Pembelian ---------- */
 document.getElementById('chkManualSN').addEventListener('change', e=>{
   document.getElementById('snBox').style.display = e.target.checked ? 'block' : 'none';
@@ -484,6 +664,8 @@ document.getElementById('formPembelian').addEventListener('submit', async e=>{
     msg.textContent = `Tersimpan. ID Pembelian: ${result.id_pembelian}. S/N dibuat: ${result.sn_dibuat.join(', ')}`;
     e.target.reset();
     document.getElementById('snBox').style.display='none';
+    loadMasterBarang(); // refresh daftar jenis barang kalau ada yang baru
+    loadAllSN(); // refresh saran S/N karena ada unit baru
   }catch(err){
     msg.className = 'msg err';
     msg.textContent = 'Gagal menyimpan: ' + err.message;
@@ -492,6 +674,7 @@ document.getElementById('formPembelian').addEventListener('submit', async e=>{
 
 /* ---------- Stok Barang ---------- */
 document.getElementById('btnFilterStok').addEventListener('click', loadStok);
+let lastStokRows = [];
 
 async function loadStok(){
   const wrap = document.getElementById('stokTableWrap');
@@ -504,11 +687,12 @@ async function loadStok(){
       toko: document.getElementById('fToko').value,
       sn: document.getElementById('fSN').value
     });
+    lastStokRows = rows;
     if(rows.length === 0){ wrap.innerHTML = '<p class="empty">Tidak ada data.</p>'; return; }
     wrap.innerHTML = `
       <table>
         <thead><tr>
-          <th>S/N</th><th>Kode</th><th>Nama Barang</th><th>Toko</th><th>Harga Beli</th>
+          <th>S/N</th><th>Kode</th><th>Nama Barang</th><th>Merk</th><th>Kategori</th><th>Satuan</th><th>Toko</th><th>Harga Beli</th>
           <th>Tgl Beli</th><th>Status</th><th>Lokasi</th><th></th>
         </tr></thead>
         <tbody>
@@ -517,6 +701,9 @@ async function loadStok(){
               <td class="sn-cell">${r.SN}</td>
               <td>${r.Kode_Barang}</td>
               <td>${r.Nama_Barang}</td>
+              <td>${r.Merk || '-'}</td>
+              <td>${r.Kategori || '-'}</td>
+              <td>${r.Satuan || '-'}</td>
               <td>${r.Toko}</td>
               <td>${rupiah(r.Harga_Beli)}</td>
               <td>${fmtTgl(r.Tanggal_Beli)}</td>
@@ -531,6 +718,218 @@ async function loadStok(){
     wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
   }
 }
+
+/* ---------- Export CSV ---------- */
+function exportCSV(filename, headers, rows){
+  const escapeCell = v => {
+    const s = (v===undefined || v===null) ? '' : String(v);
+    return /[",\\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const lines = [headers.map(h=>escapeCell(h.label)).join(',')];
+  rows.forEach(r=>{
+    lines.push(headers.map(h=>escapeCell(typeof h.value === 'function' ? h.value(r) : r[h.value])).join(','));
+  });
+  const blob = new Blob(['\\uFEFF' + lines.join('\\r\\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btnExportStok').addEventListener('click', ()=>{
+  if(lastStokRows.length===0){ alert('Belum ada data untuk diexport. Klik "Terapkan" dulu.'); return; }
+  exportCSV('stok-barang.csv', [
+    {label:'S/N', value:'SN'},
+    {label:'Kode Barang', value:'Kode_Barang'},
+    {label:'Nama Barang', value:'Nama_Barang'},
+    {label:'Merk', value:'Merk'},
+    {label:'Kategori', value:'Kategori'},
+    {label:'Satuan', value:'Satuan'},
+    {label:'Toko', value:'Toko'},
+    {label:'Harga Beli', value:'Harga_Beli'},
+    {label:'Tanggal Beli', value: r=>fmtTgl(r.Tanggal_Beli)},
+    {label:'Status', value:'Status'},
+    {label:'Lokasi', value:'Lokasi'},
+    {label:'ID Pembelian', value:'ID_Pembelian'}
+  ], lastStokRows);
+});
+
+/* ---------- Inventaris (ringkasan per jenis barang) ---------- */
+let lastInventarisRows = [];
+
+async function loadInventaris(){
+  const wrap = document.getElementById('inventarisTableWrap');
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getInventarisRingkasan');
+    lastInventarisRows = rows;
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada data stok.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Kode</th><th>Nama Barang</th><th>Kategori</th><th>Satuan</th>
+          <th>Total Unit</th><th>Gudang</th><th>Terpasang</th><th>Hilang</th><th>Rusak</th><th>Nilai di Gudang</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td class="sn-cell">${r.kode_barang}</td>
+              <td>${r.nama_barang}</td>
+              <td>${r.kategori || '-'}</td>
+              <td>${r.satuan || '-'}</td>
+              <td><strong>${r.total}</strong></td>
+              <td>${r.per_status.Gudang||0}</td>
+              <td>${r.per_status.Terpasang||0}</td>
+              <td>${r.per_status.Hilang||0}</td>
+              <td>${r.per_status.Rusak||0}</td>
+              <td>${rupiah(r.nilai_gudang)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('btnExportInventaris').addEventListener('click', ()=>{
+  if(lastInventarisRows.length===0){ alert('Belum ada data untuk diexport.'); return; }
+  exportCSV('inventaris-ringkasan.csv', [
+    {label:'Kode Barang', value:'kode_barang'},
+    {label:'Nama Barang', value:'nama_barang'},
+    {label:'Kategori', value:'kategori'},
+    {label:'Satuan', value:'satuan'},
+    {label:'Total Unit', value:'total'},
+    {label:'Gudang', value: r=>r.per_status.Gudang||0},
+    {label:'Terpasang', value: r=>r.per_status.Terpasang||0},
+    {label:'Hilang', value: r=>r.per_status.Hilang||0},
+    {label:'Rusak', value: r=>r.per_status.Rusak||0},
+    {label:'Nilai di Gudang', value:'nilai_gudang'}
+  ], lastInventarisRows);
+});
+
+/* ---------- Sub-menu Inventaris ---------- */
+document.querySelectorAll('.subnav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.subnav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.subview').forEach(v=>v.classList.remove('active'));
+    document.getElementById('sub-'+btn.dataset.sub).classList.add('active');
+    if(btn.dataset.sub === 'alat') loadAlat();
+  });
+});
+
+/* ---------- Daftar Alat ---------- */
+let lastAlatRows = [];
+let alatLokasiSet = new Set(['Tas Tools Kerja','Tas Tools Kantor','Gudang']);
+let alatNamaSet = new Set();
+
+function refreshAlatSuggestions(){
+  document.getElementById('dlLokasiAlat').innerHTML = [...alatLokasiSet].map(l=>`<option value="${l}"></option>`).join('');
+  document.getElementById('dlNamaAlat').innerHTML = [...alatNamaSet].map(n=>`<option value="${n}"></option>`).join('');
+  const fLokasi = document.getElementById('fAlatLokasi');
+  const prevVal = fLokasi.value;
+  fLokasi.innerHTML = '<option value="">Semua</option>' + [...alatLokasiSet].map(l=>`<option value="${l}">${l}</option>`).join('');
+  fLokasi.value = prevVal;
+}
+refreshAlatSuggestions();
+
+async function loadAlat(){
+  const wrap = document.getElementById('alatTableWrap');
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getAlat', {
+      lokasi: document.getElementById('fAlatLokasi').value,
+      kondisi: document.getElementById('fAlatKondisi').value,
+      cari: document.getElementById('fAlatCari').value
+    });
+    lastAlatRows = rows;
+    rows.forEach(r=>{ if(r.Lokasi) alatLokasiSet.add(r.Lokasi); if(r.Nama_Alat) alatNamaSet.add(r.Nama_Alat); });
+    refreshAlatSuggestions();
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada alat tercatat.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Nama Alat</th><th>Lokasi</th><th>Kondisi</th><th>Catatan</th><th>Diperbarui</th><th></th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td><strong>${r.Nama_Alat}</strong></td>
+              <td>${r.Lokasi}</td>
+              <td><span class="badge ${r.Kondisi}">${r.Kondisi}</span></td>
+              <td>${r.Catatan || '-'}</td>
+              <td>${fmtDT(r.Diperbarui_Pada)}${r.Diperbarui_Oleh ? ' oleh ' + r.Diperbarui_Oleh : ''}</td>
+              <td><button class="rowbtn" onclick="openModalAlat('${r.ID_Alat}')">Ubah</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('btnFilterAlat').addEventListener('click', loadAlat);
+
+document.getElementById('formAlat').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgAlat');
+  msg.className = 'msg'; msg.style.display='none';
+  if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  try{
+    await apiPost('addAlat', payload);
+    msg.className = 'msg ok';
+    msg.textContent = 'Alat tersimpan.';
+    e.target.reset();
+    loadAlat();
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal menyimpan: ' + err.message;
+  }
+});
+
+document.getElementById('btnExportAlat').addEventListener('click', ()=>{
+  if(lastAlatRows.length===0){ alert('Belum ada data untuk diexport. Klik "Terapkan" dulu.'); return; }
+  exportCSV('daftar-alat.csv', [
+    {label:'Nama Alat', value:'Nama_Alat'},
+    {label:'Lokasi', value:'Lokasi'},
+    {label:'Kondisi', value:'Kondisi'},
+    {label:'Catatan', value:'Catatan'},
+    {label:'Diperbarui Pada', value: r=>fmtDT(r.Diperbarui_Pada)},
+    {label:'Diperbarui Oleh', value:'Diperbarui_Oleh'}
+  ], lastAlatRows);
+});
+
+/* ---------- Modal ubah data alat ---------- */
+function openModalAlat(idAlat){
+  const item = lastAlatRows.find(r=>r.ID_Alat === idAlat);
+  if(!item) return;
+  document.getElementById('modalAlat').dataset.id = idAlat;
+  document.getElementById('modalAlatNama').value = item.Nama_Alat;
+  document.getElementById('modalAlatLokasi').value = item.Lokasi;
+  document.getElementById('modalAlatKondisi').value = item.Kondisi;
+  document.getElementById('modalAlatCatatan').value = item.Catatan || '';
+  document.getElementById('overlayAlat').classList.add('show');
+}
+document.getElementById('modalAlatCancel').addEventListener('click', ()=> document.getElementById('overlayAlat').classList.remove('show'));
+document.getElementById('modalAlatSave').addEventListener('click', async ()=>{
+  try{
+    await apiPost('updateAlat', {
+      id_alat: document.getElementById('modalAlat').dataset.id,
+      lokasi: document.getElementById('modalAlatLokasi').value,
+      kondisi: document.getElementById('modalAlatKondisi').value,
+      catatan: document.getElementById('modalAlatCatatan').value
+    });
+    document.getElementById('overlayAlat').classList.remove('show');
+    loadAlat();
+  }catch(err){
+    alert('Gagal menyimpan: ' + err.message);
+  }
+});
 
 /* ---------- Modal ubah status ---------- */
 function openModal(sn){
@@ -577,6 +976,7 @@ async function doTrace(){
           <h3>Info Unit</h3>
           <div class="kv"><span class="k">S/N</span><span class="v mono">${s.SN}</span></div>
           <div class="kv"><span class="k">Kode / Nama Barang</span><span class="v">${s.Kode_Barang} — ${s.Nama_Barang}</span></div>
+          <div class="kv"><span class="k">Merk</span><span class="v">${s.Merk || '-'}</span></div>
           <div class="kv"><span class="k">Status Saat Ini</span><span class="v"><span class="badge ${s.Status}">${s.Status}</span></span></div>
           <div class="kv"><span class="k">Lokasi Terpasang</span><span class="v">${s.Lokasi || '-'}</span></div>
           <div class="kv"><span class="k">Terakhir Diupdate</span><span class="v">${fmtDT(s.Tanggal_Update)}</span></div>
@@ -678,6 +1078,8 @@ async function doLogin(){
     document.getElementById('app').style.display = 'flex';
     checkConn();
     loadDashboard();
+    loadMasterBarang();
+    loadAllSN();
   }catch(err){
     APP_TOKEN = null;
     currentUser = null;
