@@ -206,7 +206,7 @@
       <button data-view="harga" id="navHarga" style="display:none;"><span class="num">06</span> Pedoman Harga</button>
       <button data-view="log" id="navLog" style="display:none;"><span class="num">07</span> Log Aktivitas</button>
     </nav>
-    <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span></div>
+    <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span><button id="btnLogout" style="display:none;margin-left:auto;background:none;border:none;color:#9aa6ba;font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">Keluar</button></div>
   </div>
 
   <div id="main">
@@ -1309,6 +1309,27 @@ async function loadHarga(){
 }
 
 /* ---------- Login ---------- */
+async function enterApp(recordThisLogin){
+  // Satu panggilan ini sekaligus berfungsi sebagai verifikasi kode akses
+  // DAN sumber data dashboard — tidak perlu fetch dashboard kedua kalinya.
+  const dash = await apiGet('getDashboard');
+  document.getElementById('navLog').style.display = currentIsAdmin ? 'flex' : 'none';
+  document.getElementById('navPembelian').style.display = currentCanSeeHarga ? 'flex' : 'none';
+  document.getElementById('navHarga').style.display = currentCanSeeHarga ? 'flex' : 'none';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('btnLogout').style.display = 'inline';
+  renderDashboard(dash);
+  document.getElementById('connDot').classList.add('ok');
+  document.getElementById('connText').textContent = 'Tersambung ke Google Sheet';
+  sessionStorage.setItem('gudang_token', APP_TOKEN);
+  sessionStorage.setItem('gudang_nama', currentUser);
+  // Tidak ditunggu (tidak pakai await) supaya tidak menahan tampilan —
+  // jalan di belakang layar setelah aplikasi sudah tampil.
+  if(recordThisLogin) apiPost('recordLogin', {}).catch(()=>{});
+  loadMasterBarang();
+}
+
 async function doLogin(){
   const nameInput = document.getElementById('loginNama');
   const input = document.getElementById('loginInput');
@@ -1330,21 +1351,7 @@ async function doLogin(){
   APP_TOKEN = kode;
   currentUser = nama;
   try{
-    // Satu panggilan ini sekaligus berfungsi sebagai verifikasi kode akses
-    // DAN sumber data dashboard — tidak perlu fetch dashboard kedua kalinya.
-    const dash = await apiGet('getDashboard');
-    document.getElementById('navLog').style.display = currentIsAdmin ? 'flex' : 'none';
-    document.getElementById('navPembelian').style.display = currentCanSeeHarga ? 'flex' : 'none';
-    document.getElementById('navHarga').style.display = currentCanSeeHarga ? 'flex' : 'none';
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
-    renderDashboard(dash);
-    document.getElementById('connDot').classList.add('ok');
-    document.getElementById('connText').textContent = 'Tersambung ke Google Sheet';
-    // Tidak ditunggu (tidak pakai await) supaya tidak menahan tampilan —
-    // jalan di belakang layar setelah aplikasi sudah tampil.
-    apiPost('recordLogin', {}).catch(()=>{});
-    loadMasterBarang();
+    await enterApp(true); // true = catat sebagai login baru
   }catch(err){
     APP_TOKEN = null;
     currentUser = null;
@@ -1357,7 +1364,44 @@ async function doLogin(){
 document.getElementById('loginBtn').addEventListener('click', doLogin);
 document.getElementById('loginInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 document.getElementById('loginNama').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginInput').focus(); });
-document.getElementById('loginNama').focus();
+
+/* ---------- Sesi bertahan saat refresh (hilang saat tab ditutup) ---------- */
+function doLogout(){
+  sessionStorage.removeItem('gudang_token');
+  sessionStorage.removeItem('gudang_nama');
+  APP_TOKEN = null;
+  currentUser = null;
+  currentIsAdmin = false;
+  currentCanSeeHarga = false;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('btnLogout').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginNama').value = '';
+  document.getElementById('loginInput').value = '';
+  document.getElementById('loginNama').focus();
+}
+document.getElementById('btnLogout').addEventListener('click', doLogout);
+
+(async function tryAutoLogin(){
+  const savedToken = sessionStorage.getItem('gudang_token');
+  const savedNama = sessionStorage.getItem('gudang_nama');
+  if(!configured || !savedToken || !savedNama){
+    document.getElementById('loginNama').focus();
+    return;
+  }
+  APP_TOKEN = savedToken;
+  currentUser = savedNama;
+  try{
+    await enterApp(false); // false = jangan catat login baru, ini cuma refresh halaman
+  }catch(err){
+    // Sesi tersimpan sudah tidak valid (mis. kode akses diganti admin) — kembali ke layar login
+    sessionStorage.removeItem('gudang_token');
+    sessionStorage.removeItem('gudang_nama');
+    APP_TOKEN = null;
+    currentUser = null;
+    document.getElementById('loginNama').focus();
+  }
+})();
 
 /* ---------- Log Aktivitas ---------- */
 async function loadLog(){
