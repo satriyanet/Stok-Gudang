@@ -282,6 +282,41 @@
         <h2>Stok Barang</h2>
         <p>Daftar setiap unit fisik (per S/N) dan status terkininya.</p>
       </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Tambah Stok</h3>
+          <button class="btn small" id="btnToggleTambahStok">+ Tambah Stok</button>
+        </div>
+        <div id="tambahStokBox" style="display:none;margin-top:16px;">
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">Pilih barang yang sudah pernah diinput (nama/merk akan otomatis terisi), atau ketik jenis barang baru. Harga beli otomatis mengikuti harga pembelian terakhir barang ini (tidak perlu diisi manual). S/N wajib diisi manual sesuai jumlah unit yang diterima.</p>
+          <form id="formStokManual">
+            <div class="form-grid">
+              <div class="field"><label>Tanggal Pembelian</label><input type="date" name="tanggal" required></div>
+              <div class="field"><label>Toko / Supplier</label><input type="text" name="toko" placeholder="mis. Toko Sinar Jaya" required></div>
+              <div class="field"><label>Kode Barang</label><input type="text" name="kode_barang" id="saKodeBarang" list="dlKode" placeholder="mis. RTR-AX3000, atau pilih dari daftar" required autocomplete="off"></div>
+              <div class="field"><label>Nama Barang</label><input type="text" name="nama_barang" id="saNamaBarang" list="dlNama" placeholder="pilih dari daftar atau ketik baru" required autocomplete="off"></div>
+              <div class="field"><label>Merk Barang</label><input type="text" name="merk" id="saMerk" list="dlMerk" placeholder="pilih dari daftar atau ketik baru" autocomplete="off"></div>
+              <input type="hidden" name="harga_beli" id="saHargaBeli" value="0">
+              <div class="field"><label>Jumlah / Satuan</label><input type="number" min="1" name="qty" id="saQty" required></div>
+              <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box" autocomplete="off"></div>
+              <div class="field"><label>Kategori</label><input type="text" name="kategori" id="saKategori" list="dlKategori" placeholder="opsional" autocomplete="off"></div>
+              <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
+              <div class="field full"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+              <div class="field full">
+                <label>Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)</label>
+                <textarea name="sn_list_text" id="saSNList" placeholder="SN00123&#10;SN00124&#10;SN00125" required></textarea>
+              </div>
+            </div>
+            <div style="margin-top:16px;">
+              <button type="submit" class="btn">Simpan Stok</button>
+              <button type="button" class="btn ghost" id="btnBatalTambahStok">Batal</button>
+            </div>
+            <div class="msg" id="msgStokManual"></div>
+          </form>
+        </div>
+      </div>
+
       <div class="panel">
         <div class="filter-bar">
           <div class="field"><label>Status</label>
@@ -622,13 +657,16 @@ async function loadAllSN(){
   }
 }
 
-function fillFromMaster(kode){
+function fillFromMasterInto(kode, ids){
   const m = masterByKode[kode];
   if(!m) return;
-  document.getElementById('pNamaBarang').value = m.Nama_Barang;
-  if(m.Merk) document.getElementById('pMerk').value = m.Merk;
-  if(m.Kategori) document.getElementById('pKategori').value = m.Kategori;
-  if(m.Satuan) document.getElementById('pSatuan').value = m.Satuan;
+  document.getElementById(ids.nama).value = m.Nama_Barang;
+  if(m.Merk) document.getElementById(ids.merk).value = m.Merk;
+  if(m.Kategori) document.getElementById(ids.kategori).value = m.Kategori;
+  if(m.Satuan) document.getElementById(ids.satuan).value = m.Satuan;
+}
+function fillFromMaster(kode){
+  fillFromMasterInto(kode, {nama:'pNamaBarang', merk:'pMerk', kategori:'pKategori', satuan:'pSatuan'});
 }
 
 document.getElementById('pKodeBarang').addEventListener('input', e=>{
@@ -637,6 +675,70 @@ document.getElementById('pKodeBarang').addEventListener('input', e=>{
 document.getElementById('pNamaBarang').addEventListener('input', e=>{
   const kode = masterNamaToKode[e.target.value];
   if(kode){ document.getElementById('pKodeBarang').value = kode; fillFromMaster(kode); }
+});
+
+async function fillHargaTerakhir(kode){
+  try{
+    const rows = await apiGet('getHargaBanding', {kode_barang: kode});
+    if(rows.length > 0) document.getElementById('saHargaBeli').value = rows[0].Harga_Beli;
+  }catch(err){
+    // Barang baru / belum ada riwayat harga — biarkan default 0
+  }
+}
+
+document.getElementById('saKodeBarang').addEventListener('input', e=>{
+  if(masterKodeToNama[e.target.value]){
+    fillFromMasterInto(e.target.value, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan'});
+    fillHargaTerakhir(e.target.value);
+  }
+});
+document.getElementById('saNamaBarang').addEventListener('input', e=>{
+  const kode = masterNamaToKode[e.target.value];
+  if(kode){
+    document.getElementById('saKodeBarang').value = kode;
+    fillFromMasterInto(kode, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan'});
+    fillHargaTerakhir(kode);
+  }
+});
+
+/* ---------- Tambah Stok (dari halaman Stok Barang, oleh Petugas Gudang) ---------- */
+document.getElementById('btnToggleTambahStok').addEventListener('click', ()=>{
+  const box = document.getElementById('tambahStokBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('btnBatalTambahStok').addEventListener('click', ()=>{
+  document.getElementById('formStokManual').reset();
+  document.getElementById('tambahStokBox').style.display = 'none';
+});
+
+document.getElementById('formStokManual').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgStokManual');
+  msg.className = 'msg'; msg.style.display='none';
+  if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
+
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  const qty = parseInt(payload.qty, 10) || 0;
+  const snLines = (payload.sn_list_text || '').split('\\n').map(s=>s.trim()).filter(Boolean);
+  delete payload.sn_list_text;
+
+  if(snLines.length === 0){ msg.className='msg err'; msg.textContent='S/N wajib diisi.'; return; }
+  if(snLines.length !== qty){ msg.className='msg err'; msg.textContent=`Jumlah S/N (${snLines.length}) harus sama dengan Jumlah (${qty}).`; return; }
+  payload.sn_list = snLines;
+
+  try{
+    const result = await apiPost('addPembelian', payload);
+    msg.className = 'msg ok';
+    msg.textContent = `Tersimpan. S/N: ${result.sn_dibuat.join(', ')}`;
+    e.target.reset();
+    loadMasterBarang();
+    loadAllSN();
+    loadStok();
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal menyimpan: ' + err.message;
+  }
 });
 
 /* ---------- Input Pembelian ---------- */
