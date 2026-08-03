@@ -1119,7 +1119,10 @@ async function loadAlat(){
               <td><span class="badge ${r.Kondisi}">${r.Kondisi}</span></td>
               <td>${r.Catatan || '-'}</td>
               <td>${fmtDT(r.Diperbarui_Pada)}${r.Diperbarui_Oleh ? ' oleh ' + r.Diperbarui_Oleh : ''}</td>
-              <td><button class="rowbtn" onclick="openModalAlat('${r.ID_Alat}')">Ubah</button></td>
+              <td>
+                <button class="rowbtn" onclick="openModalAlat('${r.ID_Alat}')">Ubah</button>
+                ${currentIsAdmin ? `<button class="rowbtn" style="color:var(--red);border-color:var(--red);margin-left:4px;" onclick="hapusAlat('${r.ID_Alat}','${String(r.Nama_Alat).replace(/'/g,"\\'")}')">Hapus</button>` : ''}
+              </td>
             </tr>
           `).join('')}
         </tbody>
@@ -1191,6 +1194,16 @@ document.getElementById('modalAlatSave').addEventListener('click', async ()=>{
     alert('Gagal menyimpan: ' + err.message);
   }
 });
+
+async function hapusAlat(idAlat, namaAlat){
+  if(!confirm(`Hapus alat "${namaAlat}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try{
+    await apiPost('deleteAlat', { id_alat: idAlat });
+    loadAlat();
+  }catch(err){
+    alert('Gagal menghapus: ' + err.message);
+  }
+}
 
 /* ---------- Modal ubah status ---------- */
 function openModal(sn){
