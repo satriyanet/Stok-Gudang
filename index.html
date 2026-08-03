@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stok Alat SANET</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2230;
+    --ink-soft:#5b6472;
+    --bg:#f2f3f5;
+    --panel:#ffffff;
+    --line:#e1e4e9;
+    --amber:#dd7a1f;
+    --amber-dark:#b85f0f;
+    --navy:#1f2a3d;
+    --blue:#2563a8;
+    --green:#1c7a4d;
+    --red:#b23a3a;
+    --gray:#6b7280;
+    --radius:10px;
+    font-size:15px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;}
+  code, .mono{font-family:'IBM Plex Mono',monospace;}
+
+  #app{display:flex;min-height:100vh;}
+
+  /* Login screen */
+  #loginScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--navy);
+  }
+  #loginBox{
+    background:#242f45;border:1px solid rgba(255,255,255,.08);border-radius:14px;
+    padding:32px 30px;width:320px;max-width:90vw;text-align:center;
+  }
+  #loginBox .tag{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:4px;}
+  #loginBox h1{margin:0 0 8px;font-size:20px;color:#fff;}
+  #loginBox p{margin:0 0 16px;font-size:13px;color:#9aa6ba;}
+  #loginBox input{background:#1a2337;border:1px solid rgba(255,255,255,.12);color:#fff;text-align:center;}
+  #loginBox input::placeholder{color:#6b7688;}
+  #loginBox .msg{text-align:left;}
+
+  /* Sidebar */
+  #sidebar{width:220px;flex-shrink:0;background:var(--navy);color:#dbe2ee;display:flex;flex-direction:column;}
+  #sidebar .brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+  #sidebar .brand .tag{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:4px;}
+  #sidebar .brand h1{margin:0;font-size:19px;font-weight:700;color:#fff;}
+  #sidebar nav{flex:1;padding:14px 10px;}
+  #sidebar nav button{
+    width:100%;text-align:left;background:none;border:none;color:#c4cddc;
+    padding:10px 12px;border-radius:8px;font-size:14px;font-family:inherit;cursor:pointer;
+    display:flex;align-items:center;gap:10px;margin-bottom:2px;transition:background .15s;
+  }
+  #sidebar nav button .num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7c8aa3;width:16px;}
+  #sidebar nav button:hover{background:rgba(255,255,255,.06);}
+  #sidebar nav button.active{background:var(--amber);color:#1a1200;font-weight:600;}
+  #sidebar nav button.active .num{color:#3a2600;}
+  #sidebar .status{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#9aa6ba;display:flex;align-items:center;gap:8px;}
+  #sidebar .dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;}
+  #sidebar .dot.ok{background:#3fbf7f;}
+
+  /* Main */
+  #main{flex:1;padding:28px 34px;max-width:1180px;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .view-header{margin-bottom:22px;}
+  .view-header h2{margin:0 0 4px;font-size:22px;}
+  .view-header p{margin:0;color:var(--ink-soft);font-size:13.5px;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
+  .panel h3{margin:0 0 14px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+
+  /* Dashboard cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;}
+  .card .label{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .card .value{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;margin-top:6px;}
+  .card.accent{border-top:3px solid var(--amber);}
+
+  .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+  .status-chip{border-radius:8px;padding:12px 14px;border:1px solid var(--line);}
+  .status-chip .n{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;}
+  .status-chip .l{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+
+  /* Forms */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-grid .full{grid-column:1 / -1;}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  input, select, textarea{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;
+    font-family:inherit;font-size:14px;background:#fff;color:var(--ink);
+  }
+  textarea{font-family:'IBM Plex Mono',monospace;font-size:13px;min-height:90px;resize:vertical;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--amber);outline-offset:1px;border-color:var(--amber);}
+  .field{margin-bottom:0;}
+  .checkline{display:flex;align-items:center;gap:8px;margin:4px 0 2px;}
+  .checkline input{width:auto;}
+
+  button.btn{
+    background:var(--amber);color:#1a1200;border:none;border-radius:8px;
+    padding:10px 18px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;
+  }
+  button.btn:hover{background:var(--amber-dark);color:#fff;}
+  button.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  button.btn.ghost:hover{background:var(--bg);}
+  button.btn.small{padding:6px 12px;font-size:12.5px;}
+
+  .msg{margin-top:12px;padding:10px 13px;border-radius:8px;font-size:13.5px;display:none;}
+  .msg.ok{display:block;background:#e8f6ee;color:var(--green);border:1px solid #bfe6cf;}
+  .msg.err{display:block;background:#fbeaea;color:var(--red);border:1px solid #f0c6c6;}
+
+  /* Filter bar */
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:16px;}
+
+  .subnav{display:flex;gap:8px;margin-bottom:18px;}
+  .subnav-btn{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink-soft);}
+  .subnav-btn:hover{background:var(--bg);}
+  .subnav-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .subview{display:none;}
+  .subview.active{display:block;}
+  .badge.Bagus{background:#e5f5ec;color:var(--green);}
+  .badge.Dipinjam{background:#fff4e2;color:var(--amber-dark);}
+  .filter-bar .field{min-width:160px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);
+     border-bottom:1px solid var(--line);padding:8px 10px;background:#fafbfc;}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);}
+  tr:hover td{background:#fafbfc;}
+  .sn-cell{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;}
+  .badge.Gudang{background:#e6effa;color:var(--blue);}
+  .badge.Terpasang{background:#e5f5ec;color:var(--green);}
+  .badge.Hilang{background:#fbeaea;color:var(--red);}
+  .badge.Rusak{background:#f1f1f2;color:var(--gray);}
+
+  .rowbtn{background:none;border:1px solid var(--line);border-radius:6px;padding:4px 9px;font-size:12px;cursor:pointer;font-family:inherit;}
+  .rowbtn:hover{background:var(--bg);}
+
+  .empty{color:var(--ink-soft);font-size:13.5px;padding:20px 4px;text-align:center;}
+
+  /* Modal */
+  #overlay, #overlayAlat{position:fixed;inset:0;background:rgba(20,24,32,.45);display:none;align-items:center;justify-content:center;z-index:50;}
+  #overlay.show, #overlayAlat.show{display:flex;}
+  #modal, #modalAlat{background:#fff;border-radius:12px;padding:22px;width:400px;max-width:92vw;}
+  #modal h3, #modalAlat h3{margin:0 0 14px;font-size:15px;}
+  #modal .field, #modalAlat .field{margin-bottom:12px;}
+  #modal .actions, #modalAlat .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+  /* Trace */
+  .trace-detail{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px;}
+  .kv .k{color:var(--ink-soft);}
+  .kv .v{font-weight:600;}
+  .timeline{border-left:2px solid var(--line);padding-left:14px;margin-left:4px;}
+  .timeline .ev{position:relative;padding-bottom:16px;}
+  .timeline .ev::before{content:'';position:absolute;left:-19px;top:3px;width:9px;height:9px;border-radius:50%;background:var(--amber);}
+  .timeline .ev .t{font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .timeline .ev .d{font-size:13.5px;margin-top:2px;}
+
+  .config-banner{background:#fff4e8;border:1px solid #f0d3a8;color:#7a4a10;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:18px;}
+  .config-banner code{background:#fff;padding:1px 6px;border-radius:4px;}
+
+  @media (max-width:800px){
+    #app{flex-direction:column;}
+    #sidebar{width:100%;}
+    #sidebar nav{display:flex;overflow-x:auto;padding:8px;}
+    #sidebar nav button{white-space:nowrap;}
+    .form-grid{grid-template-columns:1fr;}
+    .trace-detail{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div id="loginBox">
+    <span class="tag">Inventaris</span>
+    <h1>Stok Alat SANET</h1>
+    <p>Masukkan nama & kode akses untuk masuk.</p>
+    <input type="text" id="loginNama" placeholder="Nama Anda" autocomplete="off" style="margin-bottom:10px;">
+    <input type="password" id="loginInput" placeholder="Kode akses" autocomplete="off">
+    <button class="btn" id="loginBtn" style="width:100%;margin-top:10px;">Masuk</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <div id="sidebar">
+    <div class="brand">
+      <span class="tag">Inventaris</span>
+      <h1>Stok Alat SANET</h1>
+    </div>
+    <nav id="nav">
+      <button data-view="dashboard" class="active"><span class="num">01</span> Dashboard</button>
+      <button data-view="pembelian" id="navPembelian" style="display:none;"><span class="num">02</span> Input Pembelian</button>
+      <button data-view="stok"><span class="num">03</span> Stok Barang</button>
+      <button data-view="inventaris"><span class="num">04</span> Inventaris</button>
+      <button data-view="trace"><span class="num">05</span> Trace S/N</button>
+      <button data-view="harga" id="navHarga" style="display:none;"><span class="num">06</span> Pedoman Harga</button>
+      <button data-view="log" id="navLog" style="display:none;"><span class="num">07</span> Log Aktivitas</button>
+    </nav>
+    <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span><button id="btnLogout" style="display:none;margin-left:auto;background:none;border:none;color:#9aa6ba;font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">Keluar</button></div>
+  </div>
+
+  <div id="main">
+
+    <div id="configBanner" class="config-banner" style="display:none;">
+      Backend belum tersambung. Buka file <code>app.html</code> ini di editor teks, lalu isi
+      <code>APPS_SCRIPT_URL</code> di bagian bawah dengan URL Web App hasil deploy Google Apps Script Anda
+      (lihat <code>Code.gs</code> untuk cara deploy).
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="view-header">
+        <h2>Dashboard</h2>
+        <p>Ringkasan stok gudang secara real-time.</p>
+      </div>
+      <div class="cards" id="dashCards"></div>
+      <div class="panel">
+        <h3>Stok per status</h3>
+        <div class="status-grid" id="statusGrid"></div>
+      </div>
+    </section>
+
+    <!-- INPUT PEMBELIAN -->
+    <section class="view" id="view-pembelian">
+      <div class="view-header">
+        <h2>Input Pembelian</h2>
+        <p>Setiap transaksi pembelian membentuk satu batch stok baru — walau kode barang &amp; toko sama, harga lama dan baru tetap tercatat terpisah.</p>
+      </div>
+      <div class="panel">
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 14px;">Jenis barang yang sudah pernah dibeli akan muncul sebagai saran saat mengetik — tinggal pilih, tidak perlu mengetik ulang. Kalau jenis barang baru, cukup ketik seperti biasa, nanti otomatis tersimpan untuk pembelian berikutnya.</p>
+        <form id="formPembelian">
+          <div class="form-grid">
+            <div class="field"><label>Tanggal Pembelian</label><input type="date" name="tanggal" required></div>
+            <div class="field"><label>Toko / Supplier</label><input type="text" name="toko" placeholder="mis. Toko Sinar Jaya" required></div>
+            <div class="field"><label>Kode Barang</label><input type="text" name="kode_barang" id="pKodeBarang" list="dlKode" placeholder="mis. RTR-AX3000, atau pilih dari daftar" required autocomplete="off"></div>
+            <div class="field"><label>Nama Barang</label><input type="text" name="nama_barang" id="pNamaBarang" list="dlNama" placeholder="mis. Router AX3000, atau pilih dari daftar" required autocomplete="off"></div>
+            <div class="field"><label>Merk Barang</label><input type="text" name="merk" id="pMerk" list="dlMerk" placeholder="mis. TP-Link, atau pilih dari daftar" autocomplete="off"></div>
+            <div class="field"><label>Harga Beli / Unit (Rp)</label><input type="number" min="0" name="harga_beli" required></div>
+            <div class="field"><label>Qty</label><input type="number" min="1" name="qty" id="qtyInput" required></div>
+            <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
+            <div class="field"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+            <div class="field"><label>Kategori</label><input type="text" name="kategori" id="pKategori" list="dlKategori" placeholder="opsional, mis. Jaringan" autocomplete="off"></div>
+            <div class="field"><label>Satuan</label><input type="text" name="satuan" id="pSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box" autocomplete="off"></div>
+          </div>
+
+          <div class="checkline" style="margin-top:14px;">
+            <input type="checkbox" id="chkManualSN">
+            <label style="margin:0;" for="chkManualSN">Saya sudah punya S/N fisik untuk unit-unit ini</label>
+          </div>
+          <div class="field full" id="snBox" style="display:none;margin-top:8px;">
+            <label>Daftar S/N (satu baris satu unit, jumlah baris harus sama dengan Qty)</label>
+            <textarea name="sn_list" placeholder="SN00123&#10;SN00124&#10;SN00125"></textarea>
+          </div>
+
+          <div style="margin-top:16px;">
+            <button type="submit" class="btn">Simpan Pembelian &amp; Buat Stok</button>
+          </div>
+          <div class="msg" id="msgPembelian"></div>
+        </form>
+        <datalist id="dlKode"></datalist>
+        <datalist id="dlNama"></datalist>
+        <datalist id="dlMerk"></datalist>
+        <datalist id="dlKategori"></datalist>
+        <datalist id="dlSatuan"></datalist>
+        <datalist id="dlSN"></datalist>
+      </div>
+    </section>
+
+    <!-- STOK BARANG -->
+    <section class="view" id="view-stok">
+      <div class="view-header">
+        <h2>Stok Barang</h2>
+        <p>Daftar setiap unit fisik (per S/N) dan status terkininya.</p>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Tambah Stok</h3>
+          <button class="btn small" id="btnToggleTambahStok">+ Tambah Stok</button>
+        </div>
+        <div id="tambahStokBox" style="display:none;margin-top:16px;">
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">Pilih barang yang sudah pernah diinput (nama/merk akan otomatis terisi), atau ketik jenis barang baru. Harga beli otomatis mengikuti harga pembelian terakhir barang ini (tidak perlu diisi manual). S/N wajib diisi manual sesuai jumlah unit yang diterima.</p>
+          <form id="formStokManual">
+            <div class="form-grid">
+              <div class="field"><label>Tanggal Pembelian</label><input type="date" name="tanggal" required></div>
+              <div class="field"><label>Toko / Supplier</label><input type="text" name="toko" placeholder="mis. Toko Sinar Jaya" required></div>
+              <div class="field"><label>Kode Barang</label><input type="text" name="kode_barang" id="saKodeBarang" list="dlKode" placeholder="mis. RTR-AX3000, atau pilih dari daftar" required autocomplete="off"></div>
+              <div class="field"><label>Nama Barang</label><input type="text" name="nama_barang" id="saNamaBarang" list="dlNama" placeholder="pilih dari daftar atau ketik baru" required autocomplete="off"></div>
+              <div class="field"><label>Merk Barang</label><input type="text" name="merk" id="saMerk" list="dlMerk" placeholder="pilih dari daftar atau ketik baru" autocomplete="off"></div>
+              <div class="field"><label>Jumlah / Satuan</label><input type="number" min="1" name="qty" id="saQty" required></div>
+              <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box" autocomplete="off"></div>
+              <div class="field"><label>Status</label>
+                <select name="status" id="saStatus">
+                  <option value="Gudang">Gudang</option>
+                  <option value="Terpasang">Terpasang</option>
+                  <option value="Hilang">Hilang</option>
+                  <option value="Rusak">Rusak</option>
+                </select>
+              </div>
+              <div class="field" id="saLokasiBox" style="display:none;"><label>Lokasi</label><input type="text" name="lokasi" id="saLokasi" placeholder="mis. Kantor Klien - Lt 2"></div>
+              <div class="field"><label>Kategori</label><input type="text" name="kategori" id="saKategori" list="dlKategori" placeholder="opsional" autocomplete="off"></div>
+              <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
+              <div class="field full"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+              <div class="field full">
+                <label>Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)</label>
+                <textarea name="sn_list_text" id="saSNList" placeholder="SN00123&#10;SN00124&#10;SN00125" required></textarea>
+              </div>
+            </div>
+            <div style="margin-top:16px;">
+              <button type="submit" class="btn">Simpan Stok</button>
+              <button type="button" class="btn ghost" id="btnBatalTambahStok">Batal</button>
+            </div>
+            <div class="msg" id="msgStokManual"></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Barang Keluar / Pengambilan Barang</h3>
+          <button class="btn small" id="btnToggleKeluar">+ Barang Keluar</button>
+        </div>
+        <div id="keluarBox" style="display:none;margin-top:16px;">
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">Pilih jenis barang, lalu centang S/N spesifik yang diambil (disarankan, agar mudah ditrace). Kalau barang ini tidak perlu dibedakan per S/N, biarkan tidak dicentang dan isi Jumlah saja — sistem otomatis memilih dari yang paling lama masuk.</p>
+          <form id="formKeluar">
+            <div class="form-grid">
+              <div class="field full">
+                <label>Jenis Barang</label>
+                <select name="kode_barang" id="kKodeBarang" required>
+                  <option value="">Pilih barang yang tersedia di Gudang...</option>
+                </select>
+              </div>
+              <div class="field full" id="kSNListBox" style="display:none;">
+                <label>Pilih S/N (opsional — centang unit yang diambil)</label>
+                <div id="kSNListItems" style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:10px;"></div>
+              </div>
+              <div class="field"><label>Jumlah (isi hanya jika tidak memilih S/N di atas)</label><input type="number" min="1" name="jumlah" id="kJumlah"></div>
+              <div class="field"><label>Diambil Untuk / Lokasi Tujuan</label><input type="text" name="lokasi" placeholder="mis. Kantor Klien - Lt 2 / Tim Instalasi A" required></div>
+              <div class="field full"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+            </div>
+            <div style="margin-top:16px;">
+              <button type="submit" class="btn">Catat Pengambilan</button>
+              <button type="button" class="btn ghost" id="btnBatalKeluar">Batal</button>
+            </div>
+            <div class="msg" id="msgKeluar"></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="filter-bar">
+          <div class="field"><label>Status</label>
+            <select id="fStatus">
+              <option value="">Semua</option>
+              <option>Gudang</option>
+              <option>Terpasang</option>
+              <option>Hilang</option>
+              <option>Rusak</option>
+            </select>
+          </div>
+          <div class="field"><label>Kode Barang</label><select id="fKode"><option value="">Semua</option></select></div>
+          <div class="field"><label>Toko</label><input type="text" id="fToko" placeholder="nama toko"></div>
+          <div class="field"><label>Cari S/N</label><input type="text" id="fSN" list="dlSN" placeholder="ketik S/N" autocomplete="off"></div>
+          <button class="btn small" id="btnFilterStok">Terapkan</button>
+          <button class="btn ghost small" id="btnExportStok">Export CSV</button>
+        </div>
+        <div id="stokTableWrap"><p class="empty">Memuat data...</p></div>
+      </div>
+    </section>
+
+    <!-- INVENTARIS -->
+    <section class="view" id="view-inventaris">
+      <div class="view-header">
+        <h2>Inventaris</h2>
+        <p>Ringkasan stok barang dan daftar alat/perkakas kerja.</p>
+      </div>
+
+      <div class="subnav">
+        <button class="subnav-btn active" data-sub="ringkasan">Ringkasan Barang</button>
+        <button class="subnav-btn" data-sub="alat">Daftar Alat</button>
+      </div>
+
+      <!-- Sub: Ringkasan Barang -->
+      <div class="subview active" id="sub-ringkasan">
+        <div class="panel">
+          <div class="filter-bar">
+            <button class="btn ghost small" id="btnExportInventaris">Export CSV</button>
+          </div>
+          <div id="inventarisTableWrap"><p class="empty">Memuat data...</p></div>
+        </div>
+      </div>
+
+      <!-- Sub: Daftar Alat -->
+      <div class="subview" id="sub-alat">
+        <div class="panel">
+          <h3>Tambah Alat</h3>
+          <form id="formAlat">
+            <div class="form-grid">
+              <div class="field"><label>Nama Alat</label><input type="text" name="nama_alat" id="alatNama" list="dlNamaAlat" placeholder="mis. Obeng Set" required autocomplete="off"></div>
+              <div class="field"><label>Jumlah</label><input type="number" min="1" name="jumlah" id="alatJumlah" value="1" required></div>
+              <div class="field"><label>Lokasi</label><input type="text" name="lokasi" id="alatLokasi" list="dlLokasiAlat" placeholder="Tas Tools Kerja / Tas Tools Kantor / Gudang" required autocomplete="off"></div>
+              <div class="field"><label>Kondisi</label>
+                <select name="kondisi" required>
+                  <option value="">Pilih kondisi</option>
+                  <option>Bagus</option>
+                  <option>Rusak</option>
+                  <option>Hilang</option>
+                  <option>Dipinjam</option>
+                </select>
+              </div>
+              <div class="field"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+            </div>
+            <div style="margin-top:16px;"><button type="submit" class="btn">Simpan Alat</button></div>
+            <div class="msg" id="msgAlat"></div>
+          </form>
+          <datalist id="dlNamaAlat"></datalist>
+          <datalist id="dlLokasiAlat">
+            <option value="Tas Tools Kerja"></option>
+            <option value="Tas Tools Kantor"></option>
+            <option value="Gudang"></option>
+          </datalist>
+        </div>
+
+        <div class="panel">
+          <div class="filter-bar">
+            <div class="field"><label>Lokasi</label><select id="fAlatLokasi"><option value="">Semua</option></select></div>
+            <div class="field"><label>Kondisi</label>
+              <select id="fAlatKondisi">
+                <option value="">Semua</option>
+                <option>Bagus</option>
+                <option>Rusak</option>
+                <option>Hilang</option>
+                <option>Dipinjam</option>
+              </select>
+            </div>
+            <div class="field"><label>Cari Nama</label><input type="text" id="fAlatCari" placeholder="cari nama alat"></div>
+            <button class="btn small" id="btnFilterAlat">Terapkan</button>
+            <button class="btn ghost small" id="btnExportAlat">Export CSV</button>
+          </div>
+          <p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px;">Total unit sesuai filter: <strong id="alatTotalUnit">0</strong></p>
+          <div id="alatTableWrap"><p class="empty">Memuat data...</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRACE SN -->
+    <section class="view" id="view-trace">
+      <div class="view-header">
+        <h2>Trace S/N</h2>
+        <p>Lacak satu unit barang: dibeli dari toko mana, tanggal berapa, dan sekarang terpasang di mana.</p>
+      </div>
+      <div class="panel">
+        <div class="filter-bar">
+          <div class="field" style="flex:1;"><label>Nomor Seri (S/N)</label><input type="text" id="traceInput" list="dlSN" placeholder="ketik atau scan S/N..." autocomplete="off"></div>
+          <button class="btn small" id="btnTrace">Lacak</button>
+        </div>
+      </div>
+      <div id="traceResult"></div>
+    </section>
+
+    <!-- PEDOMAN HARGA -->
+    <section class="view" id="view-harga">
+      <div class="view-header">
+        <h2>Pedoman Harga</h2>
+        <p>Bandingkan riwayat harga satu barang dari berbagai toko dan waktu pembelian.</p>
+      </div>
+      <div class="panel">
+        <div class="filter-bar">
+          <div class="field" style="flex:1;"><label>Kode Barang</label><input type="text" id="hargaKode" list="dlKode" placeholder="mis. RTR-AX3000, atau pilih dari daftar" autocomplete="off"></div>
+          <button class="btn small" id="btnHarga">Tampilkan</button>
+        </div>
+        <div id="hargaTableWrap"><p class="empty">Masukkan kode barang untuk melihat riwayat harga.</p></div>
+      </div>
+    </section>
+
+    <!-- LOG AKTIVITAS -->
+    <section class="view" id="view-log">
+      <div class="view-header">
+        <h2>Log Aktivitas</h2>
+        <p>Riwayat siapa yang login, input pembelian, dan mengubah status stok.</p>
+      </div>
+      <div class="panel">
+        <div id="logTableWrap"><p class="empty">Memuat...</p></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="modal">
+    <h3>Ubah Status Unit</h3>
+    <div class="field"><label>S/N</label><input type="text" id="modalSN" readonly class="mono"></div>
+    <div class="field"><label>Status Baru</label>
+      <select id="modalStatus">
+        <option>Gudang</option>
+        <option>Terpasang</option>
+        <option>Hilang</option>
+        <option>Rusak</option>
+      </select>
+    </div>
+    <div class="field"><label>Lokasi (jika terpasang)</label><input type="text" id="modalLokasi" placeholder="mis. Kantor Klien - Lt 2"></div>
+    <div class="field"><label>Catatan</label><input type="text" id="modalCatatan" placeholder="opsional"></div>
+    <div class="actions">
+      <button class="btn ghost" id="modalCancel">Batal</button>
+      <button class="btn" id="modalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="overlayAlat">
+  <div id="modalAlat">
+    <h3>Ubah Data Alat</h3>
+    <div class="field"><label>Nama Alat</label><input type="text" id="modalAlatNama" readonly></div>
+    <div class="field"><label>Jumlah</label><input type="number" min="1" id="modalAlatJumlah"></div>
+    <div class="field"><label>Lokasi</label><input type="text" id="modalAlatLokasi" list="dlLokasiAlat" autocomplete="off"></div>
+    <div class="field"><label>Kondisi</label>
+      <select id="modalAlatKondisi">
+        <option>Bagus</option>
+        <option>Rusak</option>
+        <option>Hilang</option>
+        <option>Dipinjam</option>
+      </select>
+    </div>
+    <div class="field"><label>Catatan</label><input type="text" id="modalAlatCatatan" placeholder="opsional"></div>
+    <div class="actions">
+      <button class="btn ghost" id="modalAlatCancel">Batal</button>
+      <button class="btn" id="modalAlatSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   KONFIGURASI
+   Ganti URL di bawah ini dengan URL Web App Google Apps
+   Script Anda (lihat Code.gs untuk cara deploy).
+   Kode akses TIDAK ditulis di sini lagi — pengguna mengisinya
+   sendiri lewat layar login, supaya tidak terlihat di source
+   file ini.
+   ========================================================= */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyL9ntcEzEM3wsswOA2crzHN57UW611D7CUX3gSrqvOS223bZ8zAd49RFtvej2VSc8I/exec";
+let APP_TOKEN = null; // diisi setelah login berhasil, hanya tersimpan di memori (hilang saat halaman ditutup)
+let currentUser = null; // nama pengguna yang login, hanya tersimpan di memori
+let currentIsAdmin = false; // diisi otomatis dari respons backend setelah login
+let currentCanSeeHarga = false; // diisi otomatis dari respons backend setelah login (admin/accounting saja)
+
+const configured = APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('https://script.google.com') === 0;
+
+async function apiGet(action, params={}){
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set('action', action);
+
+  url.searchParams.set('token', APP_TOKEN);
+  url.searchParams.set('nama', currentUser || '');
+  Object.keys(params).forEach(k => { if(params[k]) url.searchParams.set(k, params[k]); });
+  const res = await fetch(url.toString());
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
+  currentIsAdmin = !!json.isAdmin;
+  currentCanSeeHarga = !!json.canSeeHarga;
+  return json.data;
+}
+
+async function apiPost(action, payload={}){
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method:'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'}, // hindari CORS preflight
+    body: JSON.stringify(Object.assign({action, token: APP_TOKEN, nama: currentUser}, payload))
+  });
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
+  currentIsAdmin = !!json.isAdmin;
+  currentCanSeeHarga = !!json.canSeeHarga;
+  return json.data;
+}
+
+function rupiah(n){
+  n = Number(n)||0;
+  return 'Rp' + n.toLocaleString('id-ID');
+}
+function fmtTgl(v){
+  if(!v) return '-';
+  const d = new Date(v);
+  if(isNaN(d)) return v;
+  return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+}
+function fmtDT(v){
+  if(!v) return '-';
+  const d = new Date(v);
+  if(isNaN(d)) return v;
+  return d.toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+/* ---------- Navigasi ---------- */
+document.querySelectorAll('#nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view === 'dashboard') loadDashboard();
+    if(btn.dataset.view === 'stok'){ loadStok(); ensureSNLoaded(); }
+    if(btn.dataset.view === 'inventaris') loadInventaris();
+    if(btn.dataset.view === 'trace') ensureSNLoaded();
+    if(btn.dataset.view === 'log') loadLog();
+  });
+});
+
+let snListLoaded = false;
+function ensureSNLoaded(){
+  if(snListLoaded) return;
+  snListLoaded = true;
+  loadAllSN();
+}
+
+/* ---------- Cek koneksi ---------- */
+async function checkConn(){
+  const dot = document.getElementById('connDot');
+  const text = document.getElementById('connText');
+  const banner = document.getElementById('configBanner');
+  if(!configured){
+    dot.classList.remove('ok'); text.textContent = 'Belum dikonfigurasi';
+    banner.style.display = 'block';
+    return;
+  }
+  try{
+    await apiGet('ping');
+    dot.classList.add('ok'); text.textContent = 'Tersambung ke Google Sheet';
+    banner.style.display = 'none';
+  }catch(err){
+    dot.classList.remove('ok'); text.textContent = 'Gagal tersambung';
+    banner.style.display = 'block';
+    banner.textContent = 'Tidak bisa menghubungi backend: ' + err.message;
+  }
+}
+
+/* ---------- Dashboard ---------- */
+function renderDashboard(d){
+  document.getElementById('dashCards').innerHTML = `
+    <div class="card accent"><div class="label">Total Unit Stok</div><div class="value">${d.total_unit}</div></div>
+    <div class="card"><div class="label">Jenis Barang</div><div class="value">${d.total_jenis_barang}</div></div>
+    ${currentCanSeeHarga ? `<div class="card"><div class="label">Nilai Stok di Gudang</div><div class="value">${rupiah(d.nilai_stok_gudang)}</div></div>` : ''}
+  `;
+  const statuses = ['Gudang','Terpasang','Hilang','Rusak'];
+  document.getElementById('statusGrid').innerHTML = statuses.map(s=>`
+    <div class="status-chip"><div class="n">${d.per_status[s]||0}</div><div class="l">${s}</div></div>
+  `).join('');
+}
+
+async function loadDashboard(){
+  if(!configured) return;
+  try{
+    const d = await apiGet('getDashboard');
+    renderDashboard(d);
+  }catch(err){
+    document.getElementById('dashCards').innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Master Barang (jenis barang) ---------- */
+let masterKodeToNama = {};
+let masterNamaToKode = {};
+let masterByKode = {};
+
+async function loadMasterBarang(){
+  try{
+    const rows = await apiGet('getMasterBarang');
+    masterKodeToNama = {};
+    masterNamaToKode = {};
+    masterByKode = {};
+    const kategoriSet = new Set();
+    const satuanSet = new Set();
+    const merkSet = new Set();
+    rows.forEach(r=>{
+      masterKodeToNama[r.Kode_Barang] = r.Nama_Barang;
+      masterNamaToKode[r.Nama_Barang] = r.Kode_Barang;
+      masterByKode[r.Kode_Barang] = r;
+      if(r.Kategori) kategoriSet.add(r.Kategori);
+      if(r.Satuan) satuanSet.add(r.Satuan);
+      if(r.Merk) merkSet.add(r.Merk);
+    });
+
+    document.getElementById('dlKode').innerHTML = rows.map(r=>`<option value="${r.Kode_Barang}">${r.Nama_Barang}</option>`).join('');
+    document.getElementById('dlNama').innerHTML = rows.map(r=>`<option value="${r.Nama_Barang}">${r.Kode_Barang}</option>`).join('');
+    document.getElementById('dlKategori').innerHTML = [...kategoriSet].map(k=>`<option value="${k}"></option>`).join('');
+    document.getElementById('dlSatuan').innerHTML = [...satuanSet].map(s=>`<option value="${s}"></option>`).join('');
+    document.getElementById('dlMerk').innerHTML = [...merkSet].map(m=>`<option value="${m}"></option>`).join('');
+
+    const fKode = document.getElementById('fKode');
+    const prevVal = fKode.value;
+    fKode.innerHTML = '<option value="">Semua</option>' + rows.map(r=>`<option value="${r.Kode_Barang}">${r.Kode_Barang} — ${r.Nama_Barang}</option>`).join('');
+    fKode.value = prevVal;
+  }catch(err){
+    // Gagal memuat daftar jenis barang tidak menghentikan aplikasi, cukup diabaikan (field tetap bisa diisi manual)
+  }
+}
+
+async function loadAllSN(){
+  try{
+    const sns = await apiGet('getAllSN');
+    document.getElementById('dlSN').innerHTML = sns.map(sn=>`<option value="${sn}"></option>`).join('');
+  }catch(err){
+    // Diabaikan — field S/N tetap bisa diisi manual tanpa saran
+  }
+}
+
+function fillFromMasterInto(kode, ids){
+  const m = masterByKode[kode];
+  if(!m) return;
+  document.getElementById(ids.nama).value = m.Nama_Barang;
+  if(m.Merk) document.getElementById(ids.merk).value = m.Merk;
+  if(m.Kategori) document.getElementById(ids.kategori).value = m.Kategori;
+  if(m.Satuan) document.getElementById(ids.satuan).value = m.Satuan;
+}
+function fillFromMaster(kode){
+  fillFromMasterInto(kode, {nama:'pNamaBarang', merk:'pMerk', kategori:'pKategori', satuan:'pSatuan'});
+}
+
+document.getElementById('pKodeBarang').addEventListener('input', e=>{
+  if(masterKodeToNama[e.target.value]) fillFromMaster(e.target.value);
+});
+document.getElementById('pNamaBarang').addEventListener('input', e=>{
+  const kode = masterNamaToKode[e.target.value];
+  if(kode){ document.getElementById('pKodeBarang').value = kode; fillFromMaster(kode); }
+});
+
+document.getElementById('saKodeBarang').addEventListener('input', e=>{
+  if(masterKodeToNama[e.target.value]){
+    fillFromMasterInto(e.target.value, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan'});
+  }
+});
+document.getElementById('saNamaBarang').addEventListener('input', e=>{
+  const kode = masterNamaToKode[e.target.value];
+  if(kode){
+    document.getElementById('saKodeBarang').value = kode;
+    fillFromMasterInto(kode, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan'});
+  }
+});
+
+/* ---------- Tambah Stok (dari halaman Stok Barang, oleh Petugas Gudang) ---------- */
+document.getElementById('btnToggleTambahStok').addEventListener('click', ()=>{
+  const box = document.getElementById('tambahStokBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('btnBatalTambahStok').addEventListener('click', ()=>{
+  document.getElementById('formStokManual').reset();
+  document.getElementById('tambahStokBox').style.display = 'none';
+  document.getElementById('saLokasiBox').style.display = 'none';
+});
+document.getElementById('saStatus').addEventListener('change', e=>{
+  const box = document.getElementById('saLokasiBox');
+  if(e.target.value === 'Gudang'){
+    box.style.display = 'none';
+    document.getElementById('saLokasi').value = '';
+  } else {
+    box.style.display = 'block';
+  }
+});
+
+document.getElementById('formStokManual').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgStokManual');
+  msg.className = 'msg'; msg.style.display='none';
+  if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
+
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  const qty = parseInt(payload.qty, 10) || 0;
+  const snLines = (payload.sn_list_text || '').split('\\n').map(s=>s.trim()).filter(Boolean);
+  delete payload.sn_list_text;
+
+  if(snLines.length === 0){ msg.className='msg err'; msg.textContent='S/N wajib diisi.'; return; }
+  if(snLines.length !== qty){ msg.className='msg err'; msg.textContent=`Jumlah S/N (${snLines.length}) harus sama dengan Jumlah (${qty}).`; return; }
+  payload.sn_list = snLines;
+
+  try{
+    const result = await apiPost('addPembelian', payload);
+    msg.className = 'msg ok';
+    msg.textContent = `Tersimpan. S/N: ${result.sn_dibuat.join(', ')}`;
+    e.target.reset();
+    loadMasterBarang();
+    loadAllSN();
+    loadStok();
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal menyimpan: ' + err.message;
+  }
+});
+
+/* ---------- Barang Keluar / Pengambilan Barang ---------- */
+document.getElementById('btnToggleKeluar').addEventListener('click', ()=>{
+  const box = document.getElementById('keluarBox');
+  const willShow = box.style.display === 'none';
+  box.style.display = willShow ? 'block' : 'none';
+  if(willShow) loadBarangTersediaUntukKeluar();
+});
+document.getElementById('btnBatalKeluar').addEventListener('click', ()=>{
+  document.getElementById('formKeluar').reset();
+  document.getElementById('keluarBox').style.display = 'none';
+  document.getElementById('kSNListBox').style.display = 'none';
+  document.getElementById('kSNListItems').innerHTML = '';
+});
+
+async function loadBarangTersediaUntukKeluar(){
+  const sel = document.getElementById('kKodeBarang');
+  sel.innerHTML = '<option value="">Memuat...</option>';
+  document.getElementById('kSNListBox').style.display = 'none';
+  document.getElementById('kSNListItems').innerHTML = '';
+  try{
+    const rows = await apiGet('getInventarisRingkasan');
+    const tersedia = rows.filter(r => (r.per_status.Gudang||0) > 0);
+    if(tersedia.length === 0){
+      sel.innerHTML = '<option value="">Tidak ada barang tersedia di Gudang</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Pilih barang yang tersedia di Gudang...</option>' +
+      tersedia.map(r=>`<option value="${r.kode_barang}">${r.nama_barang} (${r.kode_barang}) — tersedia: ${r.per_status.Gudang}</option>`).join('');
+  }catch(err){
+    sel.innerHTML = '<option value="">Gagal memuat daftar barang</option>';
+  }
+}
+
+document.getElementById('kKodeBarang').addEventListener('change', async e=>{
+  const box = document.getElementById('kSNListBox');
+  const listEl = document.getElementById('kSNListItems');
+  const kode = e.target.value;
+  if(!kode){ box.style.display = 'none'; listEl.innerHTML = ''; return; }
+  listEl.innerHTML = 'Memuat daftar S/N...';
+  box.style.display = 'block';
+  try{
+    const rows = await apiGet('getStok', {kode_barang: kode, status: 'Gudang'});
+    if(rows.length === 0){
+      listEl.innerHTML = '<span class="empty">Tidak ada unit tersedia.</span>';
+      return;
+    }
+    listEl.innerHTML = rows.map(r=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13.5px;">
+        <input type="checkbox" name="sn_pilih" value="${r.SN}" style="width:auto;">
+        <span class="mono">${r.SN}</span>
+        <span style="color:var(--ink-soft);">— masuk ${fmtTgl(r.Tanggal_Beli)}</span>
+      </label>
+    `).join('');
+  }catch(err){
+    listEl.innerHTML = `<span class="empty">Gagal memuat: ${err.message}</span>`;
+  }
+});
+
+document.getElementById('formKeluar').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgKeluar');
+  msg.className = 'msg'; msg.style.display='none';
+  if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
+
+  const fd = new FormData(e.target);
+  const payload = { kode_barang: fd.get('kode_barang'), lokasi: fd.get('lokasi'), catatan: fd.get('catatan') };
+  const snPilih = Array.from(document.querySelectorAll('input[name="sn_pilih"]:checked')).map(el=>el.value);
+
+  if(snPilih.length > 0){
+    payload.sn_list = snPilih;
+  } else {
+    const jumlah = fd.get('jumlah');
+    if(!jumlah){ msg.className='msg err'; msg.textContent='Pilih S/N secara manual, atau isi Jumlah.'; return; }
+    payload.jumlah = jumlah;
+  }
+
+  try{
+    const result = await apiPost('keluarBarang', payload);
+    msg.className = 'msg ok';
+    msg.textContent = `Tercatat. S/N yang diambil: ${result.sn_diambil.join(', ')}`;
+    e.target.reset();
+    document.getElementById('kSNListBox').style.display = 'none';
+    document.getElementById('kSNListItems').innerHTML = '';
+    loadStok();
+    loadDashboard();
+    loadBarangTersediaUntukKeluar();
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal mencatat: ' + err.message;
+  }
+});
+
+/* ---------- Input Pembelian ---------- */
+document.getElementById('chkManualSN').addEventListener('change', e=>{
+  document.getElementById('snBox').style.display = e.target.checked ? 'block' : 'none';
+});
+
+document.getElementById('formPembelian').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgPembelian');
+  msg.className = 'msg'; msg.style.display='none';
+  if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
+
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  if(document.getElementById('chkManualSN').checked){
+    payload.sn_list = payload.sn_list.split('\\n').map(s=>s.trim()).filter(Boolean);
+  } else {
+    delete payload.sn_list;
+  }
+
+  try{
+    const result = await apiPost('addPembelian', payload);
+    msg.className = 'msg ok';
+    msg.textContent = `Tersimpan. ID Pembelian: ${result.id_pembelian}. S/N dibuat: ${result.sn_dibuat.join(', ')}`;
+    e.target.reset();
+    document.getElementById('snBox').style.display='none';
+    loadMasterBarang(); // refresh daftar jenis barang kalau ada yang baru
+    loadAllSN(); // refresh saran S/N karena ada unit baru
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal menyimpan: ' + err.message;
+  }
+});
+
+/* ---------- Stok Barang ---------- */
+document.getElementById('btnFilterStok').addEventListener('click', loadStok);
+let lastStokRows = [];
+
+async function loadStok(){
+  const wrap = document.getElementById('stokTableWrap');
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getStok', {
+      status: document.getElementById('fStatus').value,
+      kode_barang: document.getElementById('fKode').value,
+      toko: document.getElementById('fToko').value,
+      sn: document.getElementById('fSN').value
+    });
+    lastStokRows = rows;
+    if(rows.length === 0){ wrap.innerHTML = '<p class="empty">Tidak ada data.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>S/N</th><th>Kode</th><th>Nama Barang</th><th>Merk</th><th>Kategori</th><th>Satuan</th><th>Toko</th>${currentCanSeeHarga ? '<th>Harga Beli</th>' : ''}
+          <th>Tgl Beli</th><th>Status</th><th>Lokasi</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td class="sn-cell">${r.SN}</td>
+              <td>${r.Kode_Barang}</td>
+              <td>${r.Nama_Barang}</td>
+              <td>${r.Merk || '-'}</td>
+              <td>${r.Kategori || '-'}</td>
+              <td>${r.Satuan || '-'}</td>
+              <td>${r.Toko}</td>
+              ${currentCanSeeHarga ? `<td>${rupiah(r.Harga_Beli)}</td>` : ''}
+              <td>${fmtTgl(r.Tanggal_Beli)}</td>
+              <td><span class="badge ${r.Status}">${r.Status}</span></td>
+              <td>${r.Lokasi || '-'}</td>
+              <td><button class="rowbtn" onclick="openModal('${r.SN}')">Ubah</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Export CSV ---------- */
+function exportCSV(filename, headers, rows){
+  const escapeCell = v => {
+    const s = (v===undefined || v===null) ? '' : String(v);
+    return /[",\\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const lines = [headers.map(h=>escapeCell(h.label)).join(',')];
+  rows.forEach(r=>{
+    lines.push(headers.map(h=>escapeCell(typeof h.value === 'function' ? h.value(r) : r[h.value])).join(','));
+  });
+  const blob = new Blob(['\\uFEFF' + lines.join('\\r\\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btnExportStok').addEventListener('click', ()=>{
+  if(lastStokRows.length===0){ alert('Belum ada data untuk diexport. Klik "Terapkan" dulu.'); return; }
+  const cols = [
+    {label:'S/N', value:'SN'},
+    {label:'Kode Barang', value:'Kode_Barang'},
+    {label:'Nama Barang', value:'Nama_Barang'},
+    {label:'Merk', value:'Merk'},
+    {label:'Kategori', value:'Kategori'},
+    {label:'Satuan', value:'Satuan'},
+    {label:'Toko', value:'Toko'}
+  ];
+  if(currentCanSeeHarga) cols.push({label:'Harga Beli', value:'Harga_Beli'});
+  cols.push(
+    {label:'Tanggal Beli', value: r=>fmtTgl(r.Tanggal_Beli)},
+    {label:'Status', value:'Status'},
+    {label:'Lokasi', value:'Lokasi'},
+    {label:'ID Pembelian', value:'ID_Pembelian'}
+  );
+  exportCSV('stok-barang.csv', cols, lastStokRows);
+});
+
+/* ---------- Inventaris (ringkasan per jenis barang) ---------- */
+let lastInventarisRows = [];
+
+async function loadInventaris(){
+  const wrap = document.getElementById('inventarisTableWrap');
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getInventarisRingkasan');
+    lastInventarisRows = rows;
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada data stok.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Kode</th><th>Nama Barang</th><th>Kategori</th><th>Satuan</th>
+          <th>Total Unit</th><th>Gudang</th><th>Terpasang</th><th>Hilang</th><th>Rusak</th>${currentCanSeeHarga ? '<th>Nilai di Gudang</th>' : ''}
+        </tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td class="sn-cell">${r.kode_barang}</td>
+              <td>${r.nama_barang}</td>
+              <td>${r.kategori || '-'}</td>
+              <td>${r.satuan || '-'}</td>
+              <td><strong>${r.total}</strong></td>
+              <td>${r.per_status.Gudang||0}</td>
+              <td>${r.per_status.Terpasang||0}</td>
+              <td>${r.per_status.Hilang||0}</td>
+              <td>${r.per_status.Rusak||0}</td>
+              ${currentCanSeeHarga ? `<td>${rupiah(r.nilai_gudang)}</td>` : ''}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('btnExportInventaris').addEventListener('click', ()=>{
+  if(lastInventarisRows.length===0){ alert('Belum ada data untuk diexport.'); return; }
+  const cols = [
+    {label:'Kode Barang', value:'kode_barang'},
+    {label:'Nama Barang', value:'nama_barang'},
+    {label:'Kategori', value:'kategori'},
+    {label:'Satuan', value:'satuan'},
+    {label:'Total Unit', value:'total'},
+    {label:'Gudang', value: r=>r.per_status.Gudang||0},
+    {label:'Terpasang', value: r=>r.per_status.Terpasang||0},
+    {label:'Hilang', value: r=>r.per_status.Hilang||0},
+    {label:'Rusak', value: r=>r.per_status.Rusak||0}
+  ];
+  if(currentCanSeeHarga) cols.push({label:'Nilai di Gudang', value:'nilai_gudang'});
+  exportCSV('inventaris-ringkasan.csv', cols, lastInventarisRows);
+});
+
+/* ---------- Sub-menu Inventaris ---------- */
+document.querySelectorAll('.subnav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.subnav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.subview').forEach(v=>v.classList.remove('active'));
+    document.getElementById('sub-'+btn.dataset.sub).classList.add('active');
+    if(btn.dataset.sub === 'alat') loadAlat();
+  });
+});
+
+/* ---------- Daftar Alat ---------- */
+let lastAlatRows = [];
+let alatLokasiSet = new Set(['Tas Tools Kerja','Tas Tools Kantor','Gudang']);
+let alatNamaSet = new Set();
+
+function refreshAlatSuggestions(){
+  document.getElementById('dlLokasiAlat').innerHTML = [...alatLokasiSet].map(l=>`<option value="${l}"></option>`).join('');
+  document.getElementById('dlNamaAlat').innerHTML = [...alatNamaSet].map(n=>`<option value="${n}"></option>`).join('');
+  const fLokasi = document.getElementById('fAlatLokasi');
+  const prevVal = fLokasi.value;
+  fLokasi.innerHTML = '<option value="">Semua</option>' + [...alatLokasiSet].map(l=>`<option value="${l}">${l}</option>`).join('');
+  fLokasi.value = prevVal;
+}
+refreshAlatSuggestions();
+
+async function loadAlat(){
+  const wrap = document.getElementById('alatTableWrap');
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getAlat', {
+      lokasi: document.getElementById('fAlatLokasi').value,
+      kondisi: document.getElementById('fAlatKondisi').value,
+      cari: document.getElementById('fAlatCari').value
+    });
+    lastAlatRows = rows;
+    rows.forEach(r=>{ if(r.Lokasi) alatLokasiSet.add(r.Lokasi); if(r.Nama_Alat) alatNamaSet.add(r.Nama_Alat); });
+    refreshAlatSuggestions();
+    const totalUnit = rows.reduce((sum, r) => sum + (parseInt(r.Jumlah, 10) || 0), 0);
+    document.getElementById('alatTotalUnit').textContent = totalUnit;
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada alat tercatat.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Nama Alat</th><th>Jumlah</th><th>Lokasi</th><th>Kondisi</th><th>Catatan</th><th>Diperbarui</th><th></th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td><strong>${r.Nama_Alat}</strong></td>
+              <td>${r.Jumlah || 1}</td>
+              <td>${r.Lokasi}</td>
+              <td><span class="badge ${r.Kondisi}">${r.Kondisi}</span></td>
+              <td>${r.Catatan || '-'}</td>
+              <td>${fmtDT(r.Diperbarui_Pada)}${r.Diperbarui_Oleh ? ' oleh ' + r.Diperbarui_Oleh : ''}</td>
+              <td>
+                <button class="rowbtn" onclick="openModalAlat('${r.ID_Alat}')">Ubah</button>
+                ${currentIsAdmin ? `<button class="rowbtn" style="color:var(--red);border-color:var(--red);margin-left:4px;" onclick="hapusAlat('${r.ID_Alat}','${String(r.Nama_Alat).replace(/'/g,"\\'")}')">Hapus</button>` : ''}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('btnFilterAlat').addEventListener('click', loadAlat);
+
+document.getElementById('formAlat').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgAlat');
+  msg.className = 'msg'; msg.style.display='none';
+  if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  try{
+    await apiPost('addAlat', payload);
+    msg.className = 'msg ok';
+    msg.textContent = 'Alat tersimpan.';
+    e.target.reset();
+    loadAlat();
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal menyimpan: ' + err.message;
+  }
+});
+
+document.getElementById('btnExportAlat').addEventListener('click', ()=>{
+  if(lastAlatRows.length===0){ alert('Belum ada data untuk diexport. Klik "Terapkan" dulu.'); return; }
+  exportCSV('daftar-alat.csv', [
+    {label:'Nama Alat', value:'Nama_Alat'},
+    {label:'Jumlah', value:'Jumlah'},
+    {label:'Lokasi', value:'Lokasi'},
+    {label:'Kondisi', value:'Kondisi'},
+    {label:'Catatan', value:'Catatan'},
+    {label:'Diperbarui Pada', value: r=>fmtDT(r.Diperbarui_Pada)},
+    {label:'Diperbarui Oleh', value:'Diperbarui_Oleh'}
+  ], lastAlatRows);
+});
+
+/* ---------- Modal ubah data alat ---------- */
+function openModalAlat(idAlat){
+  const item = lastAlatRows.find(r=>r.ID_Alat === idAlat);
+  if(!item) return;
+  document.getElementById('modalAlat').dataset.id = idAlat;
+  document.getElementById('modalAlatNama').value = item.Nama_Alat;
+  document.getElementById('modalAlatJumlah').value = item.Jumlah || 1;
+  document.getElementById('modalAlatLokasi').value = item.Lokasi;
+  document.getElementById('modalAlatKondisi').value = item.Kondisi;
+  document.getElementById('modalAlatCatatan').value = item.Catatan || '';
+  document.getElementById('overlayAlat').classList.add('show');
+}
+document.getElementById('modalAlatCancel').addEventListener('click', ()=> document.getElementById('overlayAlat').classList.remove('show'));
+document.getElementById('modalAlatSave').addEventListener('click', async ()=>{
+  try{
+    await apiPost('updateAlat', {
+      id_alat: document.getElementById('modalAlat').dataset.id,
+      jumlah: document.getElementById('modalAlatJumlah').value,
+      lokasi: document.getElementById('modalAlatLokasi').value,
+      kondisi: document.getElementById('modalAlatKondisi').value,
+      catatan: document.getElementById('modalAlatCatatan').value
+    });
+    document.getElementById('overlayAlat').classList.remove('show');
+    loadAlat();
+  }catch(err){
+    alert('Gagal menyimpan: ' + err.message);
+  }
+});
+
+async function hapusAlat(idAlat, namaAlat){
+  if(!confirm(`Hapus alat "${namaAlat}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try{
+    await apiPost('deleteAlat', { id_alat: idAlat });
+    loadAlat();
+  }catch(err){
+    alert('Gagal menghapus: ' + err.message);
+  }
+}
+
+/* ---------- Modal ubah status ---------- */
+function openModal(sn){
+  document.getElementById('modalSN').value = sn;
+  document.getElementById('modalStatus').value = 'Gudang';
+  document.getElementById('modalLokasi').value = '';
+  document.getElementById('modalCatatan').value = '';
+  document.getElementById('overlay').classList.add('show');
+}
+document.getElementById('modalCancel').addEventListener('click', ()=> document.getElementById('overlay').classList.remove('show'));
+document.getElementById('modalSave').addEventListener('click', async ()=>{
+  try{
+    await apiPost('updateStokStatus', {
+      sn: document.getElementById('modalSN').value,
+      status_baru: document.getElementById('modalStatus').value,
+      lokasi: document.getElementById('modalLokasi').value,
+      catatan: document.getElementById('modalCatatan').value
+    });
+    document.getElementById('overlay').classList.remove('show');
+    loadStok();
+    loadDashboard();
+  }catch(err){
+    alert('Gagal menyimpan: ' + err.message);
+  }
+});
+
+/* ---------- Trace S/N ---------- */
+document.getElementById('btnTrace').addEventListener('click', doTrace);
+document.getElementById('traceInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doTrace(); });
+
+async function doTrace(){
+  const wrap = document.getElementById('traceResult');
+  const sn = document.getElementById('traceInput').value.trim();
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  if(!sn){ return; }
+  wrap.innerHTML = '<p class="empty">Mencari...</p>';
+  try{
+    const d = await apiGet('traceSN', {sn});
+    if(!d.ditemukan){ wrap.innerHTML = '<p class="empty">S/N tidak ditemukan.</p>'; return; }
+    const s = d.stok, p = d.pembelian || {};
+    wrap.innerHTML = `
+      <div class="trace-detail">
+        <div class="panel">
+          <h3>Info Unit</h3>
+          <div class="kv"><span class="k">S/N</span><span class="v mono">${s.SN}</span></div>
+          <div class="kv"><span class="k">Kode / Nama Barang</span><span class="v">${s.Kode_Barang} — ${s.Nama_Barang}</span></div>
+          <div class="kv"><span class="k">Merk</span><span class="v">${s.Merk || '-'}</span></div>
+          <div class="kv"><span class="k">Status Saat Ini</span><span class="v"><span class="badge ${s.Status}">${s.Status}</span></span></div>
+          <div class="kv"><span class="k">Lokasi Terpasang</span><span class="v">${s.Lokasi || '-'}</span></div>
+          <div class="kv"><span class="k">Terakhir Diupdate</span><span class="v">${fmtDT(s.Tanggal_Update)}</span></div>
+        </div>
+        <div class="panel">
+          <h3>Asal Pembelian</h3>
+          <div class="kv"><span class="k">Toko</span><span class="v">${s.Toko}</span></div>
+          <div class="kv"><span class="k">Tanggal Beli</span><span class="v">${fmtTgl(s.Tanggal_Beli)}</span></div>
+          ${currentCanSeeHarga ? `<div class="kv"><span class="k">Harga Beli</span><span class="v">${rupiah(s.Harga_Beli)}</span></div>` : ''}
+          <div class="kv"><span class="k">No. Referensi</span><span class="v">${p.No_Referensi || '-'}</span></div>
+          <div class="kv"><span class="k">ID Pembelian</span><span class="v mono">${s.ID_Pembelian}</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Riwayat Perubahan</h3>
+        ${d.riwayat.length===0 ? '<p class="empty">Belum ada perubahan status sejak dibeli.</p>' : `
+          <div class="timeline">
+            ${d.riwayat.map(l=>`
+              <div class="ev">
+                <div class="t">${fmtDT(l.Timestamp)}</div>
+                <div class="d">${l.Status_Lama || '-'} → <strong>${l.Status_Baru}</strong>${l.Lokasi ? ' di ' + l.Lokasi : ''}${l.Keterangan ? ' — ' + l.Keterangan : ''}</div>
+              </div>
+            `).join('')}
+          </div>`}
+      </div>
+    `;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal mencari: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Pedoman Harga ---------- */
+document.getElementById('btnHarga').addEventListener('click', loadHarga);
+document.getElementById('hargaKode').addEventListener('keydown', e=>{ if(e.key==='Enter') loadHarga(); });
+
+async function loadHarga(){
+  const wrap = document.getElementById('hargaTableWrap');
+  const kode = document.getElementById('hargaKode').value.trim();
+  if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
+  if(!kode){ return; }
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getHargaBanding', {kode_barang: kode});
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada riwayat pembelian untuk kode ini.</p>'; return; }
+    const harga = rows.map(r=>Number(r.Harga_Beli));
+    const min = Math.min(...harga), max = Math.max(...harga);
+    wrap.innerHTML = `
+      <div class="cards" style="margin-bottom:16px;">
+        <div class="card"><div class="label">Harga Termurah Tercatat</div><div class="value">${rupiah(min)}</div></div>
+        <div class="card"><div class="label">Harga Tertinggi Tercatat</div><div class="value">${rupiah(max)}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Tanggal</th><th>Toko</th><th>Harga Beli</th><th>Qty</th><th>No. Referensi</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td>${fmtTgl(r.Tanggal)}</td>
+              <td>${r.Toko}</td>
+              <td>${rupiah(r.Harga_Beli)}${Number(r.Harga_Beli)===min?' <span class="badge Terpasang">termurah</span>':''}</td>
+              <td>${r.Qty}</td>
+              <td>${r.No_Referensi || '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Login ---------- */
+async function enterApp(recordThisLogin){
+  // Satu panggilan ini sekaligus berfungsi sebagai verifikasi kode akses
+  // DAN sumber data dashboard — tidak perlu fetch dashboard kedua kalinya.
+  const dash = await apiGet('getDashboard');
+  document.getElementById('navLog').style.display = currentIsAdmin ? 'flex' : 'none';
+  document.getElementById('navPembelian').style.display = currentCanSeeHarga ? 'flex' : 'none';
+  document.getElementById('navHarga').style.display = currentCanSeeHarga ? 'flex' : 'none';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('btnLogout').style.display = 'inline';
+  renderDashboard(dash);
+  document.getElementById('connDot').classList.add('ok');
+  document.getElementById('connText').textContent = 'Tersambung ke Google Sheet';
+  sessionStorage.setItem('gudang_token', APP_TOKEN);
+  sessionStorage.setItem('gudang_nama', currentUser);
+  // Tidak ditunggu (tidak pakai await) supaya tidak menahan tampilan —
+  // jalan di belakang layar setelah aplikasi sudah tampil.
+  if(recordThisLogin) apiPost('recordLogin', {}).catch(()=>{});
+  loadMasterBarang();
+}
+
+async function doLogin(){
+  const nameInput = document.getElementById('loginNama');
+  const input = document.getElementById('loginInput');
+  const msg = document.getElementById('loginMsg');
+  const btn = document.getElementById('loginBtn');
+  const nama = nameInput.value.trim();
+  const kode = input.value.trim();
+  msg.className = 'msg'; msg.style.display = 'none';
+
+  if(!configured){
+    msg.className = 'msg err';
+    msg.textContent = 'Aplikasi belum dikonfigurasi (APPS_SCRIPT_URL kosong). Hubungi admin.';
+    return;
+  }
+  if(!nama){ msg.className='msg err'; msg.textContent='Nama wajib diisi.'; return; }
+  if(!kode){ return; }
+
+  btn.disabled = true; btn.textContent = 'Memeriksa...';
+  APP_TOKEN = kode;
+  currentUser = nama;
+  try{
+    await enterApp(true); // true = catat sebagai login baru
+  }catch(err){
+    APP_TOKEN = null;
+    currentUser = null;
+    msg.className = 'msg err';
+    msg.textContent = 'Kode akses salah, atau: ' + err.message;
+  }finally{
+    btn.disabled = false; btn.textContent = 'Masuk';
+  }
+}
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('loginNama').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginInput').focus(); });
+
+/* ---------- Sesi bertahan saat refresh (hilang saat tab ditutup) ---------- */
+function doLogout(){
+  sessionStorage.removeItem('gudang_token');
+  sessionStorage.removeItem('gudang_nama');
+  APP_TOKEN = null;
+  currentUser = null;
+  currentIsAdmin = false;
+  currentCanSeeHarga = false;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('btnLogout').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginNama').value = '';
+  document.getElementById('loginInput').value = '';
+  document.getElementById('loginNama').focus();
+}
+document.getElementById('btnLogout').addEventListener('click', doLogout);
+
+(async function tryAutoLogin(){
+  const savedToken = sessionStorage.getItem('gudang_token');
+  const savedNama = sessionStorage.getItem('gudang_nama');
+  if(!configured || !savedToken || !savedNama){
+    document.getElementById('loginNama').focus();
+    return;
+  }
+  APP_TOKEN = savedToken;
+  currentUser = savedNama;
+  try{
+    await enterApp(false); // false = jangan catat login baru, ini cuma refresh halaman
+  }catch(err){
+    // Sesi tersimpan sudah tidak valid (mis. kode akses diganti admin) — kembali ke layar login
+    sessionStorage.removeItem('gudang_token');
+    sessionStorage.removeItem('gudang_nama');
+    APP_TOKEN = null;
+    currentUser = null;
+    document.getElementById('loginNama').focus();
+  }
+})();
+
+/* ---------- Log Aktivitas ---------- */
+async function loadLog(){
+  const wrap = document.getElementById('logTableWrap');
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getAktivitas');
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada aktivitas.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Waktu</th><th>Jenis</th><th>Nama</th><th>Detail</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td>${fmtDT(r.waktu)}</td>
+              <td><span class="badge ${r.tipe==='Login'?'Gudang':(r.tipe==='Ubah Status'?'Terpasang':'Rusak')}">${r.tipe}</span></td>
+              <td><strong>${r.nama}</strong></td>
+              <td>${r.detail}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+</script>
+</body>
+</html>
