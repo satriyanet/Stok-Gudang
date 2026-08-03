@@ -521,7 +521,7 @@
 <div id="overlayAlat">
   <div id="modalAlat">
     <h3>Ubah Data Alat</h3>
-    <div class="field"><label>Nama Alat</label><input type="text" id="modalAlatNama" readonly></div>
+    <div class="field"><label>Nama Alat</label><input type="text" id="modalAlatNama" list="dlNamaAlat" autocomplete="off"></div>
     <div class="field"><label>Jumlah</label><input type="number" min="1" id="modalAlatJumlah"></div>
     <div class="field"><label>Lokasi</label><input type="text" id="modalAlatLokasi" list="dlLokasiAlat" autocomplete="off"></div>
     <div class="field"><label>Kondisi</label>
@@ -1180,9 +1180,12 @@ function openModalAlat(idAlat){
 }
 document.getElementById('modalAlatCancel').addEventListener('click', ()=> document.getElementById('overlayAlat').classList.remove('show'));
 document.getElementById('modalAlatSave').addEventListener('click', async ()=>{
+  const namaBaru = document.getElementById('modalAlatNama').value.trim();
+  if(!namaBaru){ alert('Nama alat tidak boleh kosong.'); return; }
   try{
     await apiPost('updateAlat', {
       id_alat: document.getElementById('modalAlat').dataset.id,
+      nama_alat: namaBaru,
       jumlah: document.getElementById('modalAlatJumlah').value,
       lokasi: document.getElementById('modalAlatLokasi').value,
       kondisi: document.getElementById('modalAlatKondisi').value,
