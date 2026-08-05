@@ -303,15 +303,15 @@
 
       <div class="panel">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="margin:0;">Tambah Stok</h3>
+          <h3 style="margin:0;" id="tambahStokTitle">Tambah Stok</h3>
           <button class="btn small" id="btnToggleTambahStok">+ Tambah Stok</button>
         </div>
         <div id="tambahStokBox" style="display:none;margin-top:16px;">
-          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">Pilih barang yang sudah pernah diinput (nama/merk akan otomatis terisi), atau ketik jenis barang baru. Harga beli otomatis mengikuti harga pembelian terakhir barang ini (tidak perlu diisi manual). S/N wajib diisi manual sesuai jumlah unit yang diterima.</p>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;" id="hintStokManual">Pilih barang yang sudah pernah diinput (nama/merk akan otomatis terisi), atau ketik jenis barang baru. Harga beli otomatis mengikuti harga pembelian terakhir barang ini (tidak perlu diisi manual). S/N wajib diisi manual sesuai jumlah unit yang diterima.</p>
           <form id="formStokManual">
             <div class="form-grid">
-              <div class="field"><label>Tanggal Pembelian</label><input type="date" name="tanggal" required></div>
-              <div class="field"><label>Toko / Supplier</label><input type="text" name="toko" placeholder="mis. Toko Sinar Jaya" required></div>
+              <div class="field"><label>Tanggal Pembelian</label><input type="date" name="tanggal" id="saTanggal" required></div>
+              <div class="field"><label>Toko / Supplier</label><input type="text" name="toko" id="saToko" placeholder="mis. Toko Sinar Jaya" required></div>
               <div class="field"><label>Kode Barang</label><input type="text" name="kode_barang" id="saKodeBarang" list="dlKode" placeholder="mis. RTR-AX3000, atau pilih dari daftar" required autocomplete="off"></div>
               <div class="field"><label>Nama Barang</label><input type="text" name="nama_barang" id="saNamaBarang" list="dlNama" placeholder="pilih dari daftar atau ketik baru" required autocomplete="off"></div>
               <div class="field"><label>Merk Barang</label><input type="text" name="merk" id="saMerk" list="dlMerk" placeholder="pilih dari daftar atau ketik baru" autocomplete="off"></div>
@@ -328,14 +328,14 @@
               <div class="field" id="saLokasiBox" style="display:none;"><label>Lokasi</label><input type="text" name="lokasi" id="saLokasi" placeholder="mis. Kantor Klien - Lt 2"></div>
               <div class="field"><label>Kategori</label><input type="text" name="kategori" id="saKategori" list="dlKategori" placeholder="opsional" autocomplete="off"></div>
               <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
-              <div class="field full"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+              <div class="field full"><label>Catatan</label><input type="text" name="catatan" id="saCatatan" placeholder="opsional"></div>
               <div class="field full">
-                <label>Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)</label>
+                <label id="saSNLabel">Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)</label>
                 <textarea name="sn_list_text" id="saSNList" placeholder="SN00123&#10;SN00124&#10;SN00125" required></textarea>
               </div>
             </div>
             <div style="margin-top:16px;">
-              <button type="submit" class="btn">Simpan Stok</button>
+              <button type="submit" class="btn" id="btnSimpanStok">Simpan Stok</button>
               <button type="button" class="btn ghost" id="btnBatalTambahStok">Batal</button>
             </div>
             <div class="msg" id="msgStokManual"></div>
@@ -922,15 +922,32 @@ document.getElementById('saNamaBarang').addEventListener('input', e=>{
 });
 
 /* ---------- Tambah Stok (dari halaman Stok Barang, oleh Petugas Gudang) ---------- */
+let editingSN = null; // null = mode tambah baru; berisi SN asli = mode edit
+
 document.getElementById('btnToggleTambahStok').addEventListener('click', ()=>{
   const box = document.getElementById('tambahStokBox');
-  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  if(box.style.display === 'none'){
+    if(editingSN) keluarModeEdit(); // pastikan mulai dari form kosong, bukan sisa mode edit
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
 });
-document.getElementById('btnBatalTambahStok').addEventListener('click', ()=>{
+
+function keluarModeEdit(){
+  editingSN = null;
   document.getElementById('formStokManual').reset();
   document.getElementById('tambahStokBox').style.display = 'none';
   document.getElementById('saLokasiBox').style.display = 'none';
-});
+  document.getElementById('tambahStokTitle').textContent = 'Tambah Stok';
+  document.getElementById('btnSimpanStok').textContent = 'Simpan Stok';
+  document.getElementById('saQty').disabled = false;
+  document.getElementById('saSNLabel').textContent = 'Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)';
+  document.getElementById('hintStokManual').textContent = 'Pilih barang yang sudah pernah diinput (nama/merk akan otomatis terisi), atau ketik jenis barang baru. Harga beli otomatis mengikuti harga pembelian terakhir barang ini (tidak perlu diisi manual). S/N wajib diisi manual sesuai jumlah unit yang diterima.';
+}
+
+document.getElementById('btnBatalTambahStok').addEventListener('click', keluarModeEdit);
+
 document.getElementById('saStatus').addEventListener('change', e=>{
   const box = document.getElementById('saLokasiBox');
   if(e.target.value === 'Gudang'){
@@ -941,6 +958,52 @@ document.getElementById('saStatus').addEventListener('change', e=>{
   }
 });
 
+function editStokUnit(sn){
+  const item = lastStokRows.find(r=>r.SN === sn);
+  if(!item){ alert('Data tidak ditemukan, coba muat ulang tabel.'); return; }
+  editingSN = sn;
+
+  document.getElementById('tambahStokBox').style.display = 'block';
+  document.getElementById('tambahStokTitle').textContent = 'Edit Data Stok — S/N: ' + sn;
+  document.getElementById('btnSimpanStok').textContent = 'Simpan Perubahan';
+  document.getElementById('saSNLabel').textContent = 'S/N (bisa dikoreksi kalau salah input)';
+  document.getElementById('hintStokManual').textContent = 'Mengedit data unit yang sudah ada. Ubah S/N di bawah kalau sebelumnya salah input, lalu klik Simpan Perubahan.';
+
+  const tgl = item.Tanggal_Beli ? new Date(item.Tanggal_Beli) : null;
+  document.getElementById('saTanggal').value = tgl && !isNaN(tgl) ? tgl.toISOString().slice(0,10) : '';
+  document.getElementById('saToko').value = item.Toko || '';
+  document.getElementById('saKodeBarang').value = item.Kode_Barang || '';
+  document.getElementById('saNamaBarang').value = item.Nama_Barang || '';
+  document.getElementById('saMerk').value = item.Merk || '';
+  document.getElementById('saQty').value = 1;
+  document.getElementById('saQty').disabled = true;
+  document.getElementById('saSatuan').value = item.Satuan || '';
+  document.getElementById('saKategori').value = item.Kategori || '';
+  document.getElementById('saStatus').value = item.Status || 'Gudang';
+  document.getElementById('saCatatan').value = item.Catatan || '';
+  document.getElementById('saSNList').value = item.SN || '';
+  if(item.Status && item.Status !== 'Gudang'){
+    document.getElementById('saLokasiBox').style.display = 'block';
+    document.getElementById('saLokasi').value = item.Lokasi || '';
+  } else {
+    document.getElementById('saLokasiBox').style.display = 'none';
+    document.getElementById('saLokasi').value = '';
+  }
+
+  document.getElementById('tambahStokBox').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function hapusStokUnit(sn){
+  if(!confirm(`Hapus data stok S/N "${sn}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try{
+    await apiPost('deleteStokUnit', { sn: sn });
+    loadStok();
+    loadDashboard();
+  }catch(err){
+    alert('Gagal menghapus: ' + err.message);
+  }
+}
+
 document.getElementById('formStokManual').addEventListener('submit', async e=>{
   e.preventDefault();
   const msg = document.getElementById('msgStokManual');
@@ -949,10 +1012,31 @@ document.getElementById('formStokManual').addEventListener('submit', async e=>{
 
   const fd = new FormData(e.target);
   const payload = Object.fromEntries(fd.entries());
-  const qty = parseInt(payload.qty, 10) || 0;
   const snLines = (payload.sn_list_text || '').split('\n').map(s=>s.trim()).filter(Boolean);
   delete payload.sn_list_text;
 
+  if(editingSN){
+    if(snLines.length !== 1){ msg.className='msg err'; msg.textContent='Mode edit hanya untuk 1 unit — pastikan hanya ada 1 baris S/N.'; return; }
+    payload.sn_asli = editingSN;
+    payload.sn_baru = snLines[0];
+    delete payload.qty;
+    try{
+      await apiPost('updateStokUnit', payload);
+      msg.className = 'msg ok';
+      msg.textContent = 'Perubahan tersimpan.';
+      loadMasterBarang();
+      loadAllSN();
+      loadStok();
+      loadDashboard();
+      keluarModeEdit();
+    }catch(err){
+      msg.className = 'msg err';
+      msg.textContent = 'Gagal menyimpan perubahan: ' + err.message;
+    }
+    return;
+  }
+
+  const qty = parseInt(payload.qty, 10) || 0;
   if(snLines.length === 0){ msg.className='msg err'; msg.textContent='S/N wajib diisi.'; return; }
   if(snLines.length !== qty){ msg.className='msg err'; msg.textContent=`Jumlah S/N (${snLines.length}) harus sama dengan Jumlah (${qty}).`; return; }
   payload.sn_list = snLines;
@@ -1135,7 +1219,11 @@ async function loadStok(){
               <td>${fmtTgl(r.Tanggal_Beli)}</td>
               <td><span class="badge ${r.Status}">${r.Status}</span></td>
               <td>${r.Lokasi || '-'}</td>
-              <td><button class="rowbtn" onclick="openModal('${r.SN}')">Ubah</button></td>
+              <td>
+                <button class="rowbtn" onclick="openModal('${r.SN}')">Ubah</button>
+                <button class="rowbtn" style="margin-left:4px;" onclick="editStokUnit('${r.SN}')">Edit Data</button>
+                ${currentCanSeeHarga ? `<button class="rowbtn" style="color:var(--red);border-color:var(--red);margin-left:4px;" onclick="hapusStokUnit('${r.SN}')">Hapus</button>` : ''}
+              </td>
             </tr>
           `).join('')}
         </tbody>
