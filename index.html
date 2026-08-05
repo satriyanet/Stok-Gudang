@@ -1766,6 +1766,7 @@ async function enterApp(recordThisLogin){
   document.getElementById('app').style.display = 'flex';
   document.getElementById('btnLogout').style.display = 'inline';
   renderDashboard(dash);
+  loadDashStokGudang();
   document.getElementById('connDot').classList.add('ok');
   document.getElementById('connText').textContent = 'Tersambung ke Supabase';
   sessionStorage.setItem('gudang_token', APP_TOKEN);
