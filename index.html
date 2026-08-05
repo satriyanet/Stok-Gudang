@@ -147,12 +147,12 @@
   .empty{color:var(--ink-soft);font-size:13.5px;padding:20px 4px;text-align:center;}
 
   /* Modal */
-  #overlay, #overlayAlat{position:fixed;inset:0;background:rgba(20,24,32,.45);display:none;align-items:center;justify-content:center;z-index:50;}
-  #overlay.show, #overlayAlat.show{display:flex;}
-  #modal, #modalAlat{background:#fff;border-radius:12px;padding:22px;width:400px;max-width:92vw;}
-  #modal h3, #modalAlat h3{margin:0 0 14px;font-size:15px;}
-  #modal .field, #modalAlat .field{margin-bottom:12px;}
-  #modal .actions, #modalAlat .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  #overlay, #overlayAlat, #overlayUser{position:fixed;inset:0;background:rgba(20,24,32,.45);display:none;align-items:center;justify-content:center;z-index:50;}
+  #overlay.show, #overlayAlat.show, #overlayUser.show{display:flex;}
+  #modal, #modalAlat, #modalUser{background:#fff;border-radius:12px;padding:22px;width:400px;max-width:92vw;}
+  #modal h3, #modalAlat h3, #modalUser h3{margin:0 0 14px;font-size:15px;}
+  #modal .field, #modalAlat .field, #modalUser .field{margin-bottom:12px;}
+  #modal .actions, #modalAlat .actions, #modalUser .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 
   /* Trace */
   .trace-detail{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -184,9 +184,9 @@
   <div id="loginBox">
     <span class="tag">Inventaris</span>
     <h1>Stok Alat SANET</h1>
-    <p>Masukkan nama & kode akses untuk masuk.</p>
-    <input type="text" id="loginNama" placeholder="Nama Anda" autocomplete="off" style="margin-bottom:10px;">
-    <input type="password" id="loginInput" placeholder="Kode akses" autocomplete="off">
+    <p>Masukkan username & password untuk masuk.</p>
+    <input type="text" id="loginNama" placeholder="Username" autocomplete="off" style="margin-bottom:10px;">
+    <input type="password" id="loginInput" placeholder="Password" autocomplete="off">
     <button class="btn" id="loginBtn" style="width:100%;margin-top:10px;">Masuk</button>
     <div class="msg" id="loginMsg"></div>
   </div>
@@ -206,6 +206,7 @@
       <button data-view="trace"><span class="num">05</span> Trace S/N</button>
       <button data-view="harga" id="navHarga" style="display:none;"><span class="num">06</span> Pedoman Harga</button>
       <button data-view="log" id="navLog" style="display:none;"><span class="num">07</span> Log Aktivitas</button>
+      <button data-view="users" id="navUsers" style="display:none;"><span class="num">08</span> Manajemen User</button>
     </nav>
     <div class="status-block">
       <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span><button id="btnLogout" style="display:none;margin-left:auto;background:none;border:none;color:#9aa6ba;font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">Keluar</button></div>
@@ -511,6 +512,38 @@
       </div>
     </section>
 
+    <!-- MANAJEMEN USER -->
+    <section class="view" id="view-users">
+      <div class="view-header">
+        <h2>Manajemen User</h2>
+        <p>Buat, ubah, atau hapus akun login untuk tim Anda.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Tambah User</h3>
+        <form id="formUser">
+          <div class="form-grid">
+            <div class="field"><label>Username</label><input type="text" name="new_username" placeholder="mis. budi.gudang" required autocomplete="off"></div>
+            <div class="field"><label>Password</label><input type="password" name="new_password" placeholder="minimal 4 karakter" required></div>
+            <div class="field"><label>Role</label>
+              <select name="new_role" required>
+                <option value="">Pilih role</option>
+                <option value="admin">Admin (akses penuh + Log Aktivitas + Manajemen User)</option>
+                <option value="accounting">Accounting (bisa lihat harga)</option>
+                <option value="staff">Staff Gudang (tanpa harga)</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:16px;"><button type="submit" class="btn">Buat User</button></div>
+          <div class="msg" id="msgUser"></div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div id="usersTableWrap"><p class="empty">Memuat...</p></div>
+      </div>
+    </section>
+
   </div>
 </div>
 
@@ -557,17 +590,43 @@
   </div>
 </div>
 
+<div id="overlayUser">
+  <div id="modalUser">
+    <h3>Ubah User</h3>
+    <div class="field"><label>Username</label><input type="text" id="modalUserUsername" readonly></div>
+    <div class="field"><label>Role</label>
+      <select id="modalUserRole">
+        <option value="admin">Admin</option>
+        <option value="accounting">Accounting</option>
+        <option value="staff">Staff Gudang</option>
+      </select>
+    </div>
+    <div class="field"><label>Status</label>
+      <select id="modalUserAktif">
+        <option value="Ya">Aktif</option>
+        <option value="Tidak">Nonaktif</option>
+      </select>
+    </div>
+    <div class="field"><label>Reset Password (opsional)</label><input type="password" id="modalUserPassword" placeholder="kosongkan kalau tidak ingin ganti"></div>
+    <div class="actions">
+      <button class="btn ghost" id="modalUserCancel">Batal</button>
+      <button class="btn" id="modalUserSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* =========================================================
    KONFIGURASI
    Ganti URL di bawah ini dengan URL Web App Google Apps
    Script Anda (lihat Code.gs untuk cara deploy).
-   Kode akses TIDAK ditulis di sini lagi — pengguna mengisinya
-   sendiri lewat layar login, supaya tidak terlihat di source
-   file ini.
+   Username & password TIDAK ditulis di sini — setiap orang
+   login dengan akun masing-masing (dibuat lewat menu
+   Manajemen User oleh admin), disimpan hanya di memori
+   browser selama sesi berlangsung.
    ========================================================= */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyL9ntcEzEM3wsswOA2crzHN57UW611D7CUX3gSrqvOS223bZ8zAd49RFtvej2VSc8I/exec";
-let APP_TOKEN = null; // diisi setelah login berhasil, hanya tersimpan di memori (hilang saat halaman ditutup)
+let APP_TOKEN = null; // sekarang menyimpan PASSWORD pengguna, diisi setelah login berhasil
 let currentUser = null; // nama pengguna yang login, hanya tersimpan di memori
 let currentIsAdmin = false; // diisi otomatis dari respons backend setelah login
 let currentCanSeeHarga = false; // diisi otomatis dari respons backend setelah login (admin/accounting saja)
@@ -578,7 +637,8 @@ async function apiGet(action, params={}){
   const url = new URL(APPS_SCRIPT_URL);
   url.searchParams.set('action', action);
 
-  url.searchParams.set('token', APP_TOKEN);
+  url.searchParams.set('username', currentUser || '');
+  url.searchParams.set('password', APP_TOKEN || '');
   url.searchParams.set('nama', currentUser || '');
   Object.keys(params).forEach(k => { if(params[k]) url.searchParams.set(k, params[k]); });
   const res = await fetch(url.toString());
@@ -594,7 +654,7 @@ async function apiPost(action, payload={}){
   const res = await fetch(APPS_SCRIPT_URL, {
     method:'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'}, // hindari CORS preflight
-    body: JSON.stringify(Object.assign({action, token: APP_TOKEN, nama: currentUser}, payload))
+    body: JSON.stringify(Object.assign({action, username: currentUser, password: APP_TOKEN, nama: currentUser}, payload))
   });
   const json = await res.json();
   if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
@@ -642,6 +702,7 @@ document.querySelectorAll('#nav button').forEach(btn=>{
     if(btn.dataset.view === 'inventaris') loadInventaris();
     if(btn.dataset.view === 'trace') ensureSNLoaded();
     if(btn.dataset.view === 'log') loadLog();
+    if(btn.dataset.view === 'users') loadUsers();
   });
 });
 
@@ -1440,10 +1501,11 @@ async function loadHarga(){
 
 /* ---------- Login ---------- */
 async function enterApp(recordThisLogin){
-  // Satu panggilan ini sekaligus berfungsi sebagai verifikasi kode akses
+  // Satu panggilan ini sekaligus berfungsi sebagai verifikasi username/password
   // DAN sumber data dashboard — tidak perlu fetch dashboard kedua kalinya.
   const dash = await apiGet('getDashboard');
   document.getElementById('navLog').style.display = currentIsAdmin ? 'flex' : 'none';
+  document.getElementById('navUsers').style.display = currentIsAdmin ? 'flex' : 'none';
   document.getElementById('navPembelian').style.display = currentCanSeeHarga ? 'flex' : 'none';
   document.getElementById('navHarga').style.display = currentCanSeeHarga ? 'flex' : 'none';
   document.getElementById('loginScreen').style.display = 'none';
@@ -1467,7 +1529,7 @@ async function doLogin(){
   const btn = document.getElementById('loginBtn');
   const nama = nameInput.value.trim();
   const kode = input.value.trim();
-  msg.className = 'msg'; msg.style.display = 'none';
+  msg.className = 'msg';
 
   if(!configured){
     msg.className = 'msg err';
@@ -1483,10 +1545,16 @@ async function doLogin(){
   try{
     await enterApp(true); // true = catat sebagai login baru
   }catch(err){
+    // Catat percobaan gagal ke Log Aktivitas (aksi ini tidak butuh token valid)
+    fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'recordFailedLogin', nama: nama})
+    }).catch(()=>{});
     APP_TOKEN = null;
     currentUser = null;
     msg.className = 'msg err';
-    msg.textContent = 'Kode akses salah, atau: ' + err.message;
+    msg.textContent = 'Username atau password salah, atau: ' + err.message;
   }finally{
     btn.disabled = false; btn.textContent = 'Masuk';
   }
@@ -1524,7 +1592,7 @@ document.getElementById('btnLogout').addEventListener('click', doLogout);
   try{
     await enterApp(false); // false = jangan catat login baru, ini cuma refresh halaman
   }catch(err){
-    // Sesi tersimpan sudah tidak valid (mis. kode akses diganti admin) — kembali ke layar login
+    // Sesi tersimpan sudah tidak valid (mis. password diganti admin) — kembali ke layar login
     sessionStorage.removeItem('gudang_token');
     sessionStorage.removeItem('gudang_nama');
     APP_TOKEN = null;
@@ -1547,7 +1615,7 @@ async function loadLog(){
           ${rows.map(r=>`
             <tr>
               <td>${fmtDT(r.waktu)}</td>
-              <td><span class="badge ${r.tipe==='Login'?'Gudang':(r.tipe==='Ubah Status'?'Terpasang':'Rusak')}">${r.tipe}</span></td>
+              <td><span class="badge ${r.tipe==='Login'?'Gudang':(r.tipe==='Login Gagal'?'Hilang':(r.tipe==='Ubah Status'?'Terpasang':'Rusak'))}">${r.tipe}</span></td>
               <td><strong>${r.nama}</strong></td>
               <td>${r.detail}</td>
             </tr>
@@ -1556,6 +1624,97 @@ async function loadLog(){
       </table>`;
   }catch(err){
     wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+/* ---------- Manajemen User ---------- */
+let lastUsersRows = [];
+
+async function loadUsers(){
+  const wrap = document.getElementById('usersTableWrap');
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getUsers');
+    lastUsersRows = rows;
+    if(rows.length===0){ wrap.innerHTML = '<p class="empty">Belum ada user.</p>'; return; }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Dibuat</th><th></th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td class="sn-cell">${r.Username}</td>
+              <td>${r.Role}</td>
+              <td><span class="badge ${String(r.Aktif).toLowerCase()==='ya' || String(r.Aktif).toLowerCase()==='yes' ? 'Bagus' : 'Hilang'}">${r.Aktif}</span></td>
+              <td>${fmtDT(r.Dibuat_Pada)}${r.Dibuat_Oleh ? ' oleh ' + r.Dibuat_Oleh : ''}</td>
+              <td>
+                <button class="rowbtn" onclick="openModalUser('${r.Username}')">Ubah</button>
+                <button class="rowbtn" style="color:var(--red);border-color:var(--red);margin-left:4px;" onclick="hapusUser('${r.Username}')">Hapus</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('formUser').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msg = document.getElementById('msgUser');
+  msg.className = 'msg';
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  try{
+    await apiPost('addUser', payload);
+    msg.className = 'msg ok';
+    msg.textContent = `User "${payload.new_username}" berhasil dibuat.`;
+    e.target.reset();
+    loadUsers();
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = 'Gagal membuat user: ' + err.message;
+  }
+});
+
+function openModalUser(username){
+  const item = lastUsersRows.find(r=>r.Username === username);
+  if(!item) return;
+  document.getElementById('modalUser').dataset.username = username;
+  document.getElementById('modalUserUsername').value = item.Username;
+  document.getElementById('modalUserRole').value = item.Role;
+  const aktif = String(item.Aktif).toLowerCase();
+  document.getElementById('modalUserAktif').value = (aktif==='ya'||aktif==='yes') ? 'Ya' : 'Tidak';
+  document.getElementById('modalUserPassword').value = '';
+  document.getElementById('overlayUser').classList.add('show');
+}
+document.getElementById('modalUserCancel').addEventListener('click', ()=> document.getElementById('overlayUser').classList.remove('show'));
+document.getElementById('modalUserSave').addEventListener('click', async ()=>{
+  try{
+    const payload = {
+      username_target: document.getElementById('modalUser').dataset.username,
+      new_role: document.getElementById('modalUserRole').value,
+      new_aktif: document.getElementById('modalUserAktif').value
+    };
+    const pw = document.getElementById('modalUserPassword').value;
+    if(pw) payload.new_password = pw;
+    await apiPost('updateUser', payload);
+    document.getElementById('overlayUser').classList.remove('show');
+    loadUsers();
+  }catch(err){
+    alert('Gagal menyimpan: ' + err.message);
+  }
+});
+
+async function hapusUser(username){
+  if(username === currentUser){ alert('Tidak bisa menghapus akun yang sedang Anda pakai sendiri.'); return; }
+  if(!confirm(`Hapus user "${username}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try{
+    await apiPost('deleteUser', { username_target: username });
+    loadUsers();
+  }catch(err){
+    alert('Gagal menghapus: ' + err.message);
   }
 }
 
