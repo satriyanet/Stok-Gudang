@@ -60,7 +60,8 @@
   #sidebar nav button:hover{background:rgba(255,255,255,.06);}
   #sidebar nav button.active{background:var(--amber);color:#1a1200;font-weight:600;}
   #sidebar nav button.active .num{color:#3a2600;}
-  #sidebar .status{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#9aa6ba;display:flex;align-items:center;gap:8px;}
+  #sidebar .status-block{border-top:1px solid rgba(255,255,255,.08);}
+  #sidebar .status{padding:14px 20px 4px;font-size:12px;color:#9aa6ba;display:flex;align-items:center;gap:8px;}
   #sidebar .dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;}
   #sidebar .dot.ok{background:#3fbf7f;}
 
@@ -206,7 +207,10 @@
       <button data-view="harga" id="navHarga" style="display:none;"><span class="num">06</span> Pedoman Harga</button>
       <button data-view="log" id="navLog" style="display:none;"><span class="num">07</span> Log Aktivitas</button>
     </nav>
-    <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span><button id="btnLogout" style="display:none;margin-left:auto;background:none;border:none;color:#9aa6ba;font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">Keluar</button></div>
+    <div class="status-block">
+      <div class="status"><span id="connDot" class="dot"></span><span id="connText">Menghubungkan...</span><button id="btnLogout" style="display:none;margin-left:auto;background:none;border:none;color:#9aa6ba;font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">Keluar</button></div>
+      <div id="syncTime" style="padding:0 20px 12px;font-size:11px;color:#7c8aa3;"></div>
+    </div>
   </div>
 
   <div id="main">
@@ -227,6 +231,19 @@
       <div class="panel">
         <h3>Stok per status</h3>
         <div class="status-grid" id="statusGrid"></div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <h3 style="margin:0;">Stok Barang di Gudang</h3>
+          <div class="field" style="min-width:260px;margin-bottom:0;">
+            <select id="dashJenisBarang">
+              <option value="">Semua jenis barang (ringkasan)</option>
+            </select>
+          </div>
+        </div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Klik salah satu jenis barang di tabel (atau pilih dari dropdown) untuk melihat daftar unit S/N-nya.</p>
+        <div id="dashStokWrap"><p class="empty">Memuat...</p></div>
       </div>
     </section>
 
@@ -569,6 +586,7 @@ async function apiGet(action, params={}){
   if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
   currentIsAdmin = !!json.isAdmin;
   currentCanSeeHarga = !!json.canSeeHarga;
+  markSynced();
   return json.data;
 }
 
@@ -582,7 +600,17 @@ async function apiPost(action, payload={}){
   if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
   currentIsAdmin = !!json.isAdmin;
   currentCanSeeHarga = !!json.canSeeHarga;
+  markSynced();
   return json.data;
+}
+
+function markSynced(){
+  const el = document.getElementById('syncTime');
+  if(!el) return;
+  const now = new Date();
+  const jam = now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const tgl = now.toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
+  el.textContent = 'Sinkron terakhir: ' + tgl + ', ' + jam;
 }
 
 function rupiah(n){
@@ -666,7 +694,91 @@ async function loadDashboard(){
   }catch(err){
     document.getElementById('dashCards').innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
   }
+  loadDashStokGudang();
 }
+
+/* ---------- Stok Barang di Gudang (tabel di Dashboard) ---------- */
+let dashRingkasanGudang = [];
+
+async function loadDashStokGudang(){
+  const wrap = document.getElementById('dashStokWrap');
+  const sel = document.getElementById('dashJenisBarang');
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getInventarisRingkasan');
+    dashRingkasanGudang = rows.filter(r => (r.per_status.Gudang||0) > 0);
+
+    const prevVal = sel.value;
+    sel.innerHTML = '<option value="">Semua jenis barang (ringkasan)</option>' +
+      dashRingkasanGudang.map(r=>`<option value="${r.kode_barang}">${r.nama_barang} (${r.kode_barang}) — ${r.per_status.Gudang} unit</option>`).join('');
+    sel.value = prevVal;
+
+    if(sel.value){
+      renderDashStokDetail(sel.value);
+    } else {
+      renderDashStokRingkasan();
+    }
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+function renderDashStokRingkasan(){
+  const wrap = document.getElementById('dashStokWrap');
+  if(dashRingkasanGudang.length === 0){ wrap.innerHTML = '<p class="empty">Tidak ada stok di Gudang saat ini.</p>'; return; }
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>Kode</th><th>Nama Barang</th><th>Kategori</th><th>Satuan</th><th>Jumlah di Gudang</th></tr></thead>
+      <tbody>
+        ${dashRingkasanGudang.map(r=>`
+          <tr style="cursor:pointer;" onclick="pilihJenisBarangDashboard('${r.kode_barang}')">
+            <td class="sn-cell">${r.kode_barang}</td>
+            <td>${r.nama_barang}</td>
+            <td>${r.kategori || '-'}</td>
+            <td>${r.satuan || '-'}</td>
+            <td><strong>${r.per_status.Gudang}</strong></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+function pilihJenisBarangDashboard(kode){
+  document.getElementById('dashJenisBarang').value = kode;
+  renderDashStokDetail(kode);
+}
+
+async function renderDashStokDetail(kode){
+  const wrap = document.getElementById('dashStokWrap');
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const rows = await apiGet('getStok', {kode_barang: kode, status: 'Gudang'});
+    const info = dashRingkasanGudang.find(r=>r.kode_barang===kode);
+    const judul = info ? `${info.nama_barang} (${info.kode_barang})` : kode;
+    if(rows.length === 0){ wrap.innerHTML = `<p class="empty">Tidak ada unit "${judul}" di Gudang.</p>`; return; }
+    wrap.innerHTML = `
+      <p style="font-size:13px;margin:0 0 10px;"><button class="btn ghost small" onclick="document.getElementById('dashJenisBarang').value='';renderDashStokRingkasan();">← Kembali ke ringkasan</button></p>
+      <table>
+        <thead><tr><th>S/N</th><th>Merk</th><th>Tanggal Masuk</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td class="sn-cell">${r.SN}</td>
+              <td>${r.Merk || '-'}</td>
+              <td>${fmtTgl(r.Tanggal_Beli)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('dashJenisBarang').addEventListener('change', e=>{
+  if(e.target.value) renderDashStokDetail(e.target.value);
+  else renderDashStokRingkasan();
+});
 
 /* ---------- Master Barang (jenis barang) ---------- */
 let masterKodeToNama = {};
@@ -792,6 +904,7 @@ document.getElementById('formStokManual').addEventListener('submit', async e=>{
     loadMasterBarang();
     loadAllSN();
     loadStok();
+    loadDashboard();
   }catch(err){
     msg.className = 'msg err';
     msg.textContent = 'Gagal menyimpan: ' + err.message;
@@ -917,6 +1030,7 @@ document.getElementById('formPembelian').addEventListener('submit', async e=>{
     document.getElementById('snBox').style.display='none';
     loadMasterBarang(); // refresh daftar jenis barang kalau ada yang baru
     loadAllSN(); // refresh saran S/N karena ada unit baru
+    loadDashboard();
   }catch(err){
     msg.className = 'msg err';
     msg.textContent = 'Gagal menyimpan: ' + err.message;
