@@ -128,14 +128,14 @@
   .badge.Dipinjam{background:#fff4e2;color:var(--amber-dark);}
   .filter-bar .field{min-width:160px;}
 
-  table{width:100%;border-collapse:collapse;font-size:13.5px;}
-  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);
-     border-bottom:1px solid var(--line);padding:8px 10px;background:#fafbfc;}
-  td{padding:9px 10px;border-bottom:1px solid var(--line);}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);
+     border-bottom:1px solid var(--line);padding:6px 8px;background:#fafbfc;}
+  td{padding:6px 8px;border-bottom:1px solid var(--line);}
   tr:hover td{background:#fafbfc;}
   .sn-cell{font-family:'IBM Plex Mono',monospace;font-weight:600;}
 
-  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;}
   .badge.Gudang{background:#e6effa;color:var(--blue);}
   .badge.Terpasang{background:#e5f5ec;color:var(--green);}
   .badge.Hilang{background:#fbeaea;color:var(--red);}
@@ -277,7 +277,8 @@
           </div>
           <div class="field full" id="snBox" style="display:none;margin-top:8px;">
             <label>Daftar S/N (satu baris satu unit, jumlah baris harus sama dengan Qty)</label>
-            <textarea name="sn_list" placeholder="SN00123&#10;SN00124&#10;SN00125"></textarea>
+            <textarea name="sn_list" id="snListPembelian" placeholder="SN00123&#10;SN00124&#10;SN00125"></textarea>
+            <div id="snListPembelianWarning" style="display:none;color:var(--red);font-size:12px;margin-top:4px;"></div>
           </div>
 
           <div style="margin-top:16px;">
@@ -332,6 +333,7 @@
               <div class="field full">
                 <label id="saSNLabel">Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)</label>
                 <textarea name="sn_list_text" id="saSNList" placeholder="SN00123&#10;SN00124&#10;SN00125" required></textarea>
+                <div id="saSNWarning" style="display:none;color:var(--red);font-size:12px;margin-top:4px;"></div>
               </div>
             </div>
             <div style="margin-top:16px;">
@@ -1015,14 +1017,37 @@ async function loadMasterBarang(){
   }
 }
 
+let knownSNs = new Set();
+
 async function loadAllSN(){
   try{
     const sns = await apiGet('getAllSN');
+    knownSNs = new Set(sns);
     document.getElementById('dlSN').innerHTML = sns.map(sn=>`<option value="${sn}"></option>`).join('');
   }catch(err){
     // Diabaikan — field S/N tetap bisa diisi manual tanpa saran
   }
 }
+
+function cekSNDobel(textareaId, warningId, excludeSN){
+  const lines = document.getElementById(textareaId).value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const dobel = lines.filter(sn => knownSNs.has(sn) && sn !== excludeSN);
+  const warnEl = document.getElementById(warningId);
+  if(dobel.length > 0){
+    warnEl.style.display = 'block';
+    warnEl.textContent = '⚠ S/N sudah pernah terdaftar, tidak bisa dipakai lagi: ' + dobel.join(', ');
+  } else {
+    warnEl.style.display = 'none';
+    warnEl.textContent = '';
+  }
+}
+
+document.getElementById('snListPembelian').addEventListener('input', ()=>{
+  cekSNDobel('snListPembelian', 'snListPembelianWarning', null);
+});
+document.getElementById('saSNList').addEventListener('input', ()=>{
+  cekSNDobel('saSNList', 'saSNWarning', editingSN);
+});
 
 function fillFromMasterInto(kode, ids){
   const m = masterByKode[kode];
