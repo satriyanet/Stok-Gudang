@@ -777,7 +777,7 @@ document.getElementById('formStokManual').addEventListener('submit', async e=>{
   const fd = new FormData(e.target);
   const payload = Object.fromEntries(fd.entries());
   const qty = parseInt(payload.qty, 10) || 0;
-  const snLines = (payload.sn_list_text || '').split('\\n').map(s=>s.trim()).filter(Boolean);
+  const snLines = (payload.sn_list_text || '').split('\n').map(s=>s.trim()).filter(Boolean);
   delete payload.sn_list_text;
 
   if(snLines.length === 0){ msg.className='msg err'; msg.textContent='S/N wajib diisi.'; return; }
@@ -904,7 +904,7 @@ document.getElementById('formPembelian').addEventListener('submit', async e=>{
   const fd = new FormData(e.target);
   const payload = Object.fromEntries(fd.entries());
   if(document.getElementById('chkManualSN').checked){
-    payload.sn_list = payload.sn_list.split('\\n').map(s=>s.trim()).filter(Boolean);
+    payload.sn_list = payload.sn_list.split('\n').map(s=>s.trim()).filter(Boolean);
   } else {
     delete payload.sn_list;
   }
