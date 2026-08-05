@@ -771,7 +771,7 @@ document.getElementById('saStatus').addEventListener('change', e=>{
 document.getElementById('formStokManual').addEventListener('submit', async e=>{
   e.preventDefault();
   const msg = document.getElementById('msgStokManual');
-  msg.className = 'msg'; msg.style.display='none';
+  msg.className = 'msg';
   if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
 
   const fd = new FormData(e.target);
@@ -787,7 +787,7 @@ document.getElementById('formStokManual').addEventListener('submit', async e=>{
   try{
     const result = await apiPost('addPembelian', payload);
     msg.className = 'msg ok';
-    msg.textContent = `Tersimpan. S/N: ${result.sn_dibuat.join(', ')}`;
+    msg.textContent = `Tersimpan. S/N: ${(result.sn_dibuat||[]).join(', ')}`;
     e.target.reset();
     loadMasterBarang();
     loadAllSN();
@@ -859,7 +859,7 @@ document.getElementById('kKodeBarang').addEventListener('change', async e=>{
 document.getElementById('formKeluar').addEventListener('submit', async e=>{
   e.preventDefault();
   const msg = document.getElementById('msgKeluar');
-  msg.className = 'msg'; msg.style.display='none';
+  msg.className = 'msg';
   if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
 
   const fd = new FormData(e.target);
@@ -877,7 +877,7 @@ document.getElementById('formKeluar').addEventListener('submit', async e=>{
   try{
     const result = await apiPost('keluarBarang', payload);
     msg.className = 'msg ok';
-    msg.textContent = `Tercatat. S/N yang diambil: ${result.sn_diambil.join(', ')}`;
+    msg.textContent = `Tercatat. S/N yang diambil: ${(result.sn_diambil||[]).join(', ')}`;
     e.target.reset();
     document.getElementById('kSNListBox').style.display = 'none';
     document.getElementById('kSNListItems').innerHTML = '';
@@ -898,7 +898,7 @@ document.getElementById('chkManualSN').addEventListener('change', e=>{
 document.getElementById('formPembelian').addEventListener('submit', async e=>{
   e.preventDefault();
   const msg = document.getElementById('msgPembelian');
-  msg.className = 'msg'; msg.style.display='none';
+  msg.className = 'msg';
   if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
 
   const fd = new FormData(e.target);
@@ -912,7 +912,7 @@ document.getElementById('formPembelian').addEventListener('submit', async e=>{
   try{
     const result = await apiPost('addPembelian', payload);
     msg.className = 'msg ok';
-    msg.textContent = `Tersimpan. ID Pembelian: ${result.id_pembelian}. S/N dibuat: ${result.sn_dibuat.join(', ')}`;
+    msg.textContent = `Tersimpan. ID Pembelian: ${result.id_pembelian}. S/N dibuat: ${(result.sn_dibuat||[]).join(', ')}`;
     e.target.reset();
     document.getElementById('snBox').style.display='none';
     loadMasterBarang(); // refresh daftar jenis barang kalau ada yang baru
@@ -1137,7 +1137,7 @@ document.getElementById('btnFilterAlat').addEventListener('click', loadAlat);
 document.getElementById('formAlat').addEventListener('submit', async e=>{
   e.preventDefault();
   const msg = document.getElementById('msgAlat');
-  msg.className = 'msg'; msg.style.display='none';
+  msg.className = 'msg';
   if(!configured){ msg.className='msg err'; msg.textContent='Backend belum dikonfigurasi.'; return; }
   const fd = new FormData(e.target);
   const payload = Object.fromEntries(fd.entries());
