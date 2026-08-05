@@ -218,8 +218,8 @@
 
     <div id="configBanner" class="config-banner" style="display:none;">
       Backend belum tersambung. Buka file <code>app.html</code> ini di editor teks, lalu isi
-      <code>APPS_SCRIPT_URL</code> di bagian bawah dengan URL Web App hasil deploy Google Apps Script Anda
-      (lihat <code>Code.gs</code> untuk cara deploy).
+      <code>SUPABASE_URL</code> dan <code>SUPABASE_KEY</code> di bagian bawah dengan Project URL
+      dan publishable key dari project Supabase Anda (Project Settings → API).
     </div>
 
     <!-- DASHBOARD -->
@@ -617,51 +617,187 @@
 
 <script>
 /* =========================================================
-   KONFIGURASI
-   Ganti URL di bawah ini dengan URL Web App Google Apps
-   Script Anda (lihat Code.gs untuk cara deploy).
-   Username & password TIDAK ditulis di sini — setiap orang
-   login dengan akun masing-masing (dibuat lewat menu
-   Manajemen User oleh admin), disimpan hanya di memori
-   browser selama sesi berlangsung.
+   KONFIGURASI SUPABASE
+   Isi 2 nilai di bawah ini dari project Supabase Anda:
+   Project Settings -> API -> Project URL & anon public key
+   (anon public key = "publishable key", BUKAN secret key).
    ========================================================= */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyL9ntcEzEM3wsswOA2crzHN57UW611D7CUX3gSrqvOS223bZ8zAd49RFtvej2VSc8I/exec";
-let APP_TOKEN = null; // sekarang menyimpan PASSWORD pengguna, diisi setelah login berhasil
-let currentUser = null; // nama pengguna yang login, hanya tersimpan di memori
-let currentIsAdmin = false; // diisi otomatis dari respons backend setelah login
-let currentCanSeeHarga = false; // diisi otomatis dari respons backend setelah login (admin/accounting saja)
+const SUPABASE_URL = "https://uiaklolupiifwuzwmhba.supabase.co/rest/v1/";
+const SUPABASE_KEY = "sb_publishable_XXF7FPMsiD99RIJy2QENeQ_6WpKHxOJ";
 
-const configured = APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('https://script.google.com') === 0;
+let APP_TOKEN = null; // menyimpan PASSWORD pengguna, diisi setelah login berhasil
+let currentUser = null; // username yang login, hanya tersimpan di memori
+let currentIsAdmin = false; // diisi setelah login berhasil (role = admin)
+let currentCanSeeHarga = false; // diisi setelah login berhasil (role = admin/accounting)
+
+const configured = SUPABASE_URL && SUPABASE_URL.indexOf('https://') === 0 && SUPABASE_URL.indexOf('supabase.co') !== -1;
+
+// ---------- Pemanggil dasar ke fungsi SQL (RPC) Supabase ----------
+async function supabaseRpc(fnName, params){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(params)
+  });
+  const text = await res.text();
+  let data = null;
+  if(text){ try{ data = JSON.parse(text); }catch(e){ data = text; } }
+  if(!res.ok){
+    const msg = (data && data.message) ? data.message : (typeof data === 'string' && data ? data : 'Terjadi kesalahan');
+    throw new Error(msg);
+  }
+  return data;
+}
+
+const rowOrEmpty = rows => (Array.isArray(rows) && rows.length > 0) ? rows[0] : {};
+
+// ---------- Tabel pemetaan: nama action lama -> fungsi SQL baru ----------
+// "build" menyusun parameter p_... dari action+params yang dikirim kode
+// UI (tidak berubah dari sebelumnya). "map" mengubah bentuk hasil dari
+// Supabase (huruf kecil ala kolom SQL) balik ke bentuk yang sudah
+// dipakai di seluruh tampilan (Kode_Barang, Nama_Barang, dst) supaya
+// kode UI yang sudah ada tidak perlu diubah sama sekali.
+const RPC_MAP = {
+  getMasterBarang: {
+    fn:'master_barang_list', build:()=>({}),
+    map:rows=>rows.map(r=>({Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Kategori:r.kategori, Satuan:r.satuan}))
+  },
+  getPembelian: {
+    fn:'pembelian_list', build:p=>({p_kode_barang:p.kode_barang||null}),
+    map:rows=>rows.map(r=>({ID_Pembelian:r.id_pembelian, Tanggal:r.tanggal, Toko:r.toko, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Harga_Beli:r.harga_beli, Qty:r.qty, No_Referensi:r.no_referensi, Catatan:r.catatan, Dibuat_Pada:r.dibuat_pada, Dibuat_Oleh:r.dibuat_oleh}))
+  },
+  getStok: {
+    fn:'stok_list', build:p=>({p_status:p.status||null, p_kode_barang:p.kode_barang||null, p_toko:p.toko||null, p_sn:p.sn||null}),
+    map:rows=>rows.map(r=>({SN:r.sn, ID_Pembelian:r.id_pembelian, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Tanggal_Update:r.tanggal_update, Catatan:r.catatan, Kategori:r.kategori, Satuan:r.satuan}))
+  },
+  traceSN: {
+    fn:'stok_trace', build:p=>({p_sn:p.sn}),
+    map:rows=>{
+      const r = rowOrEmpty(rows);
+      if(!r.ditemukan) return {ditemukan:false};
+      return {
+        ditemukan:true,
+        stok:{SN:r.sn, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Tanggal_Update:r.tanggal_update, ID_Pembelian:r.id_pembelian},
+        pembelian:{No_Referensi:r.no_referensi},
+        riwayat: r.riwayat || []
+      };
+    }
+  },
+  getHargaBanding: {
+    fn:'harga_banding', build:p=>({p_kode_barang:p.kode_barang}),
+    map:rows=>rows.map(r=>({Tanggal:r.tanggal, Toko:r.toko, Harga_Beli:r.harga_beli, Qty:r.qty, No_Referensi:r.no_referensi}))
+  },
+  getDashboard: {
+    fn:'dashboard_get', build:()=>({}),
+    map:rows=>{
+      const r = rowOrEmpty(rows);
+      return {total_unit:r.total_unit||0, total_jenis_barang:r.total_jenis_barang||0, nilai_stok_gudang:r.nilai_stok_gudang||0,
+        per_status:{Gudang:r.gudang||0, Terpasang:r.terpasang||0, Hilang:r.hilang||0, Rusak:r.rusak||0}};
+    }
+  },
+  getInventarisRingkasan: {
+    fn:'inventaris_ringkasan', build:()=>({}),
+    map:rows=>rows.map(r=>({kode_barang:r.kode_barang, nama_barang:r.nama_barang, merk:r.merk, kategori:r.kategori, satuan:r.satuan, total:r.total, nilai_gudang:r.nilai_gudang,
+      per_status:{Gudang:r.gudang||0, Terpasang:r.terpasang||0, Hilang:r.hilang||0, Rusak:r.rusak||0}}))
+  },
+  getAlat: {
+    fn:'alat_list', build:p=>({p_lokasi:p.lokasi||null, p_kondisi:p.kondisi||null, p_cari:p.cari||null}),
+    map:rows=>rows.map(r=>({ID_Alat:r.id_alat, Nama_Alat:r.nama_alat, Jumlah:r.jumlah, Lokasi:r.lokasi, Kondisi:r.kondisi, Catatan:r.catatan, Dibuat_Pada:r.dibuat_pada, Dibuat_Oleh:r.dibuat_oleh, Diperbarui_Pada:r.diperbarui_pada, Diperbarui_Oleh:r.diperbarui_oleh}))
+  },
+  getAllSN: {
+    fn:'stok_all_sn', build:()=>({}),
+    map:rows=>rows.map(r=>r.sn)
+  },
+  getAktivitas: {
+    fn:'aktivitas_list', build:()=>({}),
+    map:rows=>rows.map(r=>({tipe:r.tipe, waktu:r.waktu, nama:r.nama, detail:r.detail}))
+  },
+  getUsers: {
+    fn:'users_list', build:()=>({}),
+    map:rows=>rows.map(r=>({Username:r.username, Role:r.role, Aktif:r.aktif, Dibuat_Pada:r.dibuat_pada, Dibuat_Oleh:r.dibuat_oleh}))
+  },
+  addPembelian: {
+    fn:'pembelian_add',
+    build:p=>({p_tanggal:p.tanggal, p_toko:p.toko, p_kode_barang:p.kode_barang, p_nama_barang:p.nama_barang, p_merk:p.merk||null,
+      p_harga_beli: p.harga_beli ? Number(p.harga_beli) : null, p_qty:Number(p.qty), p_no_referensi:p.no_referensi||null, p_catatan:p.catatan||null,
+      p_sn_list:p.sn_list||null, p_status:p.status||'Gudang', p_lokasi:p.lokasi||null, p_kategori:p.kategori||null, p_satuan:p.satuan||null}),
+    map:rows=>{ const r = rowOrEmpty(rows); return {id_pembelian:r.id_pembelian, sn_dibuat:r.sn_dibuat||[]}; }
+  },
+  updateStokStatus: {
+    fn:'stok_update_status', build:p=>({p_sn:p.sn, p_status_baru:p.status_baru, p_lokasi:p.lokasi||null, p_catatan:p.catatan||null}),
+    map:()=>({updated:true})
+  },
+  updateStokUnit: {
+    fn:'stok_update_unit', build:p=>({p_sn_asli:p.sn_asli, p_sn_baru:p.sn_baru||null, p_kode_barang:p.kode_barang||null, p_nama_barang:p.nama_barang||null,
+      p_merk:p.merk||null, p_toko:p.toko||null, p_tanggal:p.tanggal||null, p_status:p.status||null, p_lokasi:p.lokasi||null, p_catatan:p.catatan||null}),
+    map:rows=>{ const r = rowOrEmpty(rows); return {updated:true, sn_baru:r.sn_baru}; }
+  },
+  deleteStokUnit: {
+    fn:'stok_delete', build:p=>({p_sn:p.sn, p_catatan:p.catatan||null}),
+    map:()=>({deleted:true})
+  },
+  keluarBarang: {
+    fn:'stok_keluar', build:p=>({p_kode_barang:p.kode_barang, p_lokasi:p.lokasi, p_jumlah:p.jumlah?Number(p.jumlah):null, p_sn_list:p.sn_list||null, p_catatan:p.catatan||null}),
+    map:rows=>{ const r = rowOrEmpty(rows); return {sn_diambil:r.sn_diambil||[]}; }
+  },
+  addAlat: {
+    fn:'alat_add', build:p=>({p_nama_alat:p.nama_alat, p_lokasi:p.lokasi, p_kondisi:p.kondisi, p_jumlah:p.jumlah?Number(p.jumlah):1, p_catatan:p.catatan||null}),
+    map:rows=>{ const r = rowOrEmpty(rows); return {id_alat:r.id_alat}; }
+  },
+  updateAlat: {
+    fn:'alat_update', build:p=>({p_id_alat:p.id_alat, p_nama_alat:p.nama_alat||null, p_jumlah:p.jumlah?Number(p.jumlah):null, p_lokasi:p.lokasi||null, p_kondisi:p.kondisi||null, p_catatan:p.catatan!==undefined?p.catatan:null}),
+    map:()=>({updated:true})
+  },
+  deleteAlat: {
+    fn:'alat_delete', build:p=>({p_id_alat:p.id_alat}),
+    map:()=>({deleted:true})
+  },
+  addUser: {
+    fn:'users_add', build:p=>({p_new_username:p.new_username, p_new_password:p.new_password, p_new_role:p.new_role}),
+    map:()=>({added:true})
+  },
+  updateUser: {
+    fn:'users_update', build:p=>({p_target_username:p.username_target, p_new_role:p.new_role||null, p_new_aktif:p.new_aktif||null, p_new_password:p.new_password||null}),
+    map:()=>({updated:true})
+  },
+  deleteUser: {
+    fn:'users_delete', build:p=>({p_target_username:p.username_target}),
+    map:()=>({deleted:true})
+  }
+};
 
 async function apiGet(action, params={}){
-  const url = new URL(APPS_SCRIPT_URL);
-  url.searchParams.set('action', action);
-
-  url.searchParams.set('username', currentUser || '');
-  url.searchParams.set('password', APP_TOKEN || '');
-  url.searchParams.set('nama', currentUser || '');
-  Object.keys(params).forEach(k => { if(params[k]) url.searchParams.set(k, params[k]); });
-  const res = await fetch(url.toString());
-  const json = await res.json();
-  if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
-  currentIsAdmin = !!json.isAdmin;
-  currentCanSeeHarga = !!json.canSeeHarga;
+  if(action === 'ping') return {message:'Backend aktif'};
+  const entry = RPC_MAP[action];
+  if(!entry) throw new Error('Action tidak dikenal: ' + action);
+  const rows = await supabaseRpc(entry.fn, Object.assign({p_username: currentUser||'', p_password: APP_TOKEN||''}, entry.build(params)));
   markSynced();
-  return json.data;
+  return entry.map(rows);
 }
 
 async function apiPost(action, payload={}){
-  const res = await fetch(APPS_SCRIPT_URL, {
-    method:'POST',
-    headers: {'Content-Type':'text/plain;charset=utf-8'}, // hindari CORS preflight
-    body: JSON.stringify(Object.assign({action, username: currentUser, password: APP_TOKEN, nama: currentUser}, payload))
-  });
-  const json = await res.json();
-  if(!json.ok) throw new Error(json.error || 'Terjadi kesalahan');
-  currentIsAdmin = !!json.isAdmin;
-  currentCanSeeHarga = !!json.canSeeHarga;
+  if(action === 'recordLogin'){
+    await supabaseRpc('login_record', {p_username: currentUser||'', p_status:'Berhasil', p_keterangan:null});
+    markSynced();
+    return {recorded:true};
+  }
+  const entry = RPC_MAP[action];
+  if(!entry) throw new Error('Action tidak dikenal: ' + action);
+  const rows = await supabaseRpc(entry.fn, Object.assign({p_username: currentUser||'', p_password: APP_TOKEN||''}, entry.build(payload)));
   markSynced();
-  return json.data;
+  return entry.map(rows);
+}
+
+// Dipakai khusus saat login GAGAL (tidak lewat apiPost karena
+// belum tentu username/password-nya valid).
+async function recordFailedLoginSupabase(username){
+  try{
+    await supabaseRpc('login_record', {p_username: username||'', p_status:'Gagal', p_keterangan:'Username atau password salah'});
+  }catch(e){ /* diabaikan */ }
 }
 
 function markSynced(){
@@ -725,7 +861,7 @@ async function checkConn(){
   }
   try{
     await apiGet('ping');
-    dot.classList.add('ok'); text.textContent = 'Tersambung ke Google Sheet';
+    dot.classList.add('ok'); text.textContent = 'Tersambung ke Supabase';
     banner.style.display = 'none';
   }catch(err){
     dot.classList.remove('ok'); text.textContent = 'Gagal tersambung';
@@ -1589,8 +1725,13 @@ async function loadHarga(){
 
 /* ---------- Login ---------- */
 async function enterApp(recordThisLogin){
-  // Satu panggilan ini sekaligus berfungsi sebagai verifikasi username/password
-  // DAN sumber data dashboard — tidak perlu fetch dashboard kedua kalinya.
+  // Cek username/password sekaligus ambil role-nya (admin/accounting/staff)
+  const authRows = await supabaseRpc('login_cek', {p_username: currentUser||'', p_password: APP_TOKEN||''});
+  const auth = rowOrEmpty(authRows);
+  if(!auth.authorized) throw new Error(auth.message || 'Username atau password salah.');
+  currentIsAdmin = auth.role === 'admin';
+  currentCanSeeHarga = auth.role === 'admin' || auth.role === 'accounting';
+
   const dash = await apiGet('getDashboard');
   document.getElementById('navLog').style.display = currentIsAdmin ? 'flex' : 'none';
   document.getElementById('navUsers').style.display = currentIsAdmin ? 'flex' : 'none';
@@ -1601,7 +1742,7 @@ async function enterApp(recordThisLogin){
   document.getElementById('btnLogout').style.display = 'inline';
   renderDashboard(dash);
   document.getElementById('connDot').classList.add('ok');
-  document.getElementById('connText').textContent = 'Tersambung ke Google Sheet';
+  document.getElementById('connText').textContent = 'Tersambung ke Supabase';
   sessionStorage.setItem('gudang_token', APP_TOKEN);
   sessionStorage.setItem('gudang_nama', currentUser);
   // Tidak ditunggu (tidak pakai await) supaya tidak menahan tampilan —
@@ -1621,7 +1762,7 @@ async function doLogin(){
 
   if(!configured){
     msg.className = 'msg err';
-    msg.textContent = 'Aplikasi belum dikonfigurasi (APPS_SCRIPT_URL kosong). Hubungi admin.';
+    msg.textContent = 'Aplikasi belum dikonfigurasi (SUPABASE_URL/SUPABASE_KEY kosong). Hubungi admin.';
     return;
   }
   if(!nama){ msg.className='msg err'; msg.textContent='Nama wajib diisi.'; return; }
@@ -1633,12 +1774,7 @@ async function doLogin(){
   try{
     await enterApp(true); // true = catat sebagai login baru
   }catch(err){
-    // Catat percobaan gagal ke Log Aktivitas (aksi ini tidak butuh token valid)
-    fetch(APPS_SCRIPT_URL, {
-      method:'POST',
-      headers: {'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({action:'recordFailedLogin', nama: nama})
-    }).catch(()=>{});
+    recordFailedLoginSupabase(nama); // catat percobaan gagal ke Log Aktivitas
     APP_TOKEN = null;
     currentUser = null;
     msg.className = 'msg err';
