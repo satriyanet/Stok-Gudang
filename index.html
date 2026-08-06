@@ -73,7 +73,7 @@
   .view-header h2{margin:0 0 4px;font-size:22px;}
   .view-header p{margin:0;color:var(--ink-soft);font-size:13.5px;}
 
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px;overflow-x:auto;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .panel h3{margin:0 0 14px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
 
   /* Dashboard cards */
@@ -128,9 +128,9 @@
   .badge.Dipinjam{background:#fff4e2;color:var(--amber-dark);}
   .filter-bar .field{min-width:160px;}
 
-  table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+  table{width:100%;min-width:640px;border-collapse:collapse;font-size:12px;table-layout:fixed;}
   th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);
-     border-bottom:1px solid var(--line);padding:6px 8px;background:#fafbfc;overflow-wrap:break-word;}
+     border-bottom:1px solid var(--line);padding:6px 8px;background:#fafbfc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   td{padding:6px 8px;border-bottom:1px solid var(--line);overflow-wrap:break-word;word-break:break-word;}
   tr:hover td{background:#fafbfc;}
   .sn-cell{font-family:'IBM Plex Mono',monospace;font-weight:600;}
@@ -183,6 +183,9 @@
     #sidebar nav button{white-space:nowrap;}
     .form-grid{grid-template-columns:1fr;}
     .trace-detail{grid-template-columns:1fr;}
+    #main{padding:18px 12px;}
+    .panel{padding:14px 10px;}
+    .status-grid{grid-template-columns:repeat(2,1fr);}
   }
 </style>
 </head>
