@@ -385,10 +385,16 @@
               <div class="field"><label>Kategori</label><input type="text" name="kategori" id="saKategori" list="dlKategori" placeholder="opsional" autocomplete="off"></div>
               <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
               <div class="field full"><label>Catatan</label><input type="text" name="catatan" id="saCatatan" placeholder="opsional"></div>
+              <div class="field full" id="saTanpaSNBox">
+                <div class="checkline">
+                  <input type="checkbox" id="chkTanpaSN">
+                  <label style="margin:0;" for="chkTanpaSN">Barang ini tidak punya S/N fisik (biarkan sistem buatkan kode otomatis)</label>
+                </div>
+              </div>
               <div class="field full">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                   <label id="saSNLabel" style="margin:0;">Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)</label>
-                  <button type="button" class="btn ghost small" onclick="openScanner('saSNList','append-textarea')">📷 Scan Barcode</button>
+                  <button type="button" class="btn ghost small" id="saBtnScan" onclick="openScanner('saSNList','append-textarea')">📷 Scan Barcode</button>
                 </div>
                 <textarea name="sn_list_text" id="saSNList" placeholder="SN00123&#10;SN00124&#10;SN00125" required style="margin-top:8px;"></textarea>
                 <div id="saSNWarning" style="display:none;color:var(--red);font-size:12px;margin-top:4px;"></div>
@@ -1329,6 +1335,11 @@ function keluarModeEdit(){
   document.getElementById('saQty').disabled = false;
   document.getElementById('saSNLabel').textContent = 'Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)';
   document.getElementById('hintStokManual').textContent = 'Pilih barang yang sudah pernah diinput (nama/brand akan otomatis terisi), atau ketik jenis barang baru. Harga beli otomatis mengikuti harga pembelian terakhir barang ini (tidak perlu diisi manual). S/N wajib diisi manual sesuai jumlah unit yang diterima.';
+  document.getElementById('saTanpaSNBox').style.display = 'block';
+  document.getElementById('saSNList').disabled = false;
+  document.getElementById('saSNList').required = true;
+  document.getElementById('saSNList').placeholder = 'SN00123\nSN00124\nSN00125';
+  document.getElementById('saBtnScan').style.display = 'inline-block';
 }
 
 document.getElementById('btnBatalTambahStok').addEventListener('click', ()=>{
@@ -1346,6 +1357,26 @@ document.getElementById('saStatus').addEventListener('change', e=>{
   }
 });
 
+document.getElementById('chkTanpaSN').addEventListener('change', e=>{
+  const ta = document.getElementById('saSNList');
+  const label = document.getElementById('saSNLabel');
+  const scanBtn = document.getElementById('saBtnScan');
+  if(e.target.checked){
+    ta.required = false;
+    ta.value = '';
+    ta.disabled = true;
+    ta.placeholder = 'Tidak perlu diisi — sistem akan membuatkan kode S/N otomatis';
+    label.textContent = 'Daftar S/N (tidak berlaku — barang ini tidak punya S/N fisik)';
+    scanBtn.style.display = 'none';
+  } else {
+    ta.required = true;
+    ta.disabled = false;
+    ta.placeholder = 'SN00123\nSN00124\nSN00125';
+    label.textContent = 'Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)';
+    scanBtn.style.display = 'inline-block';
+  }
+});
+
 function editStokUnit(sn){
   const item = lastStokRows.find(r=>r.SN === sn);
   if(!item){ alert('Data tidak ditemukan, coba muat ulang tabel.'); return; }
@@ -1355,6 +1386,11 @@ function editStokUnit(sn){
   document.getElementById('btnSimpanStok').textContent = 'Simpan Perubahan';
   document.getElementById('saSNLabel').textContent = 'S/N (bisa dikoreksi kalau salah input)';
   document.getElementById('hintStokManual').textContent = 'Mengedit data unit yang sudah ada. Ubah S/N di bawah kalau sebelumnya salah input, lalu klik Simpan Perubahan.';
+  document.getElementById('saTanpaSNBox').style.display = 'none';
+  document.getElementById('chkTanpaSN').checked = false;
+  document.getElementById('saSNList').disabled = false;
+  document.getElementById('saSNList').required = true;
+  document.getElementById('saBtnScan').style.display = 'inline-block';
 
   const tgl = item.Tanggal_Beli ? new Date(item.Tanggal_Beli) : null;
   document.getElementById('saTanggal').value = tgl && !isNaN(tgl) ? tgl.toISOString().slice(0,10) : '';
@@ -1433,15 +1469,25 @@ document.getElementById('formStokManual').addEventListener('submit', async e=>{
   }
 
   const qty = parseInt(payload.qty, 10) || 0;
-  if(snLines.length === 0){ msg.className='msg err'; msg.textContent='S/N wajib diisi.'; return; }
-  if(snLines.length !== qty){ msg.className='msg err'; msg.textContent=`Jumlah S/N (${snLines.length}) harus sama dengan Jumlah (${qty}).`; return; }
-  payload.sn_list = snLines;
+  const tanpaSN = document.getElementById('chkTanpaSN').checked;
+  if(!tanpaSN){
+    if(snLines.length === 0){ msg.className='msg err'; msg.textContent='S/N wajib diisi, atau centang "Barang ini tidak punya S/N fisik".'; return; }
+    if(snLines.length !== qty){ msg.className='msg err'; msg.textContent=`Jumlah S/N (${snLines.length}) harus sama dengan Jumlah (${qty}).`; return; }
+    payload.sn_list = snLines;
+  }
+  // Kalau tanpaSN dicentang: sn_list sengaja tidak dikirim, backend
+  // otomatis membuatkan kode S/N sendiri untuk tiap unit.
 
   try{
     const result = await apiPost('addPembelian', payload);
     msg.className = 'msg ok';
     msg.textContent = `Tersimpan. S/N: ${(result.sn_dibuat||[]).join(', ')}`;
     e.target.reset();
+    document.getElementById('saSNList').disabled = false;
+    document.getElementById('saSNList').required = true;
+    document.getElementById('saSNList').placeholder = 'SN00123\nSN00124\nSN00125';
+    document.getElementById('saSNLabel').textContent = 'Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)';
+    document.getElementById('saBtnScan').style.display = 'inline-block';
     loadMasterBarang();
     loadAllSN();
     loadStok();
