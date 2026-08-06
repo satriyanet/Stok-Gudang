@@ -155,12 +155,17 @@
   .ac-item:hover{background:var(--bg);}
   .ac-empty{padding:8px 12px;font-size:12.5px;color:var(--ink-soft);}
 
-  #overlay, #overlayAlat, #overlayUser{position:fixed;inset:0;background:rgba(20,24,32,.45);display:none;align-items:center;justify-content:center;z-index:50;}
-  #overlay.show, #overlayAlat.show, #overlayUser.show{display:flex;}
+  #overlay, #overlayAlat, #overlayUser, #overlayScan{position:fixed;inset:0;background:rgba(20,24,32,.45);display:none;align-items:center;justify-content:center;z-index:50;}
+  #overlay.show, #overlayAlat.show, #overlayUser.show, #overlayScan.show{display:flex;}
   #modal, #modalAlat, #modalUser{background:#fff;border-radius:12px;padding:22px;width:400px;max-width:92vw;}
   #modal h3, #modalAlat h3, #modalUser h3{margin:0 0 14px;font-size:15px;}
   #modal .field, #modalAlat .field, #modalUser .field{margin-bottom:12px;}
   #modal .actions, #modalAlat .actions, #modalUser .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+  #modalScan{background:#fff;border-radius:12px;padding:22px;width:440px;max-width:94vw;}
+  #modalScan h3{margin:0 0 14px;font-size:15px;}
+  #modalScan .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+  #scanReader{width:100%;border-radius:8px;overflow:hidden;background:#000;min-height:240px;}
 
   /* Trace */
   .trace-detail{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -341,7 +346,12 @@
             </div>
             <div class="field"><label>Kode Barang</label><select id="fKode"><option value="">Semua</option></select></div>
             <div class="field"><label>Toko</label><input type="text" id="fToko" placeholder="nama toko"></div>
-            <div class="field"><label>Cari S/N</label><input type="text" id="fSN" list="dlSN" placeholder="ketik S/N" autocomplete="off"></div>
+            <div class="field"><label>Cari S/N</label>
+              <div style="display:flex;gap:6px;">
+                <input type="text" id="fSN" list="dlSN" placeholder="ketik S/N" autocomplete="off" style="flex:1;">
+                <button type="button" class="btn ghost small" onclick="openScanner('fSN','single-input-search')" title="Scan Barcode">📷</button>
+              </div>
+            </div>
             <button class="btn small" id="btnFilterStok">Terapkan</button>
             <button class="btn ghost small" id="btnExportStok">Export CSV</button>
           </div>
@@ -376,8 +386,11 @@
               <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
               <div class="field full"><label>Catatan</label><input type="text" name="catatan" id="saCatatan" placeholder="opsional"></div>
               <div class="field full">
-                <label id="saSNLabel">Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)</label>
-                <textarea name="sn_list_text" id="saSNList" placeholder="SN00123&#10;SN00124&#10;SN00125" required></textarea>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <label id="saSNLabel" style="margin:0;">Daftar S/N (wajib, satu baris satu unit, jumlah baris harus sama dengan Jumlah)</label>
+                  <button type="button" class="btn ghost small" onclick="openScanner('saSNList','append-textarea')">📷 Scan Barcode</button>
+                </div>
+                <textarea name="sn_list_text" id="saSNList" placeholder="SN00123&#10;SN00124&#10;SN00125" required style="margin-top:8px;"></textarea>
                 <div id="saSNWarning" style="display:none;color:var(--red);font-size:12px;margin-top:4px;"></div>
               </div>
             </div>
@@ -505,7 +518,12 @@
       </div>
       <div class="panel">
         <div class="filter-bar">
-          <div class="field" style="flex:1;"><label>Nomor Seri (S/N)</label><input type="text" id="traceInput" list="dlSN" placeholder="ketik atau scan S/N..." autocomplete="off"></div>
+          <div class="field" style="flex:1;"><label>Nomor Seri (S/N)</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="traceInput" list="dlSN" placeholder="ketik atau scan S/N..." autocomplete="off" style="flex:1;">
+              <button type="button" class="btn ghost small" onclick="openScanner('traceInput','single-input-trace')" title="Scan Barcode">📷</button>
+            </div>
+          </div>
           <button class="btn small" id="btnTrace">Lacak</button>
         </div>
       </div>
@@ -642,6 +660,18 @@
   </div>
 </div>
 
+<div id="overlayScan">
+  <div id="modalScan">
+    <h3>Scan Barcode / QR S/N</h3>
+    <div id="scanReader"></div>
+    <p id="scanHint" style="font-size:12.5px;color:var(--ink-soft);margin:10px 0 0;">Arahkan kamera ke barcode/QR pada barang. Izinkan akses kamera kalau diminta browser.</p>
+    <div class="actions">
+      <button class="btn ghost" id="btnScanClose">Selesai</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 /* =========================================================
    KONFIGURASI SUPABASE
@@ -804,6 +834,68 @@ const RPC_MAP = {
     map:()=>({deleted:true})
   }
 };
+
+/* ---------- Scan Barcode/QR (pakai kamera HP lewat browser) ---------- */
+let scannerActive = null;
+let scanTargetId = null;
+let scanTargetMode = null; // 'append-textarea' | 'single-input-search' | 'single-input-trace'
+
+function openScanner(targetId, mode){
+  if(typeof Html5Qrcode === 'undefined'){
+    alert('Fitur scan belum siap dimuat, coba lagi sebentar atau refresh halaman.');
+    return;
+  }
+  scanTargetId = targetId;
+  scanTargetMode = mode;
+  document.getElementById('scanHint').textContent = 'Arahkan kamera ke barcode/QR pada barang. Izinkan akses kamera kalau diminta browser.';
+  document.getElementById('overlayScan').classList.add('show');
+
+  scannerActive = new Html5Qrcode('scanReader');
+  Html5Qrcode.getCameras().then(cameras=>{
+    if(!cameras || cameras.length === 0){ throw new Error('Kamera tidak ditemukan di perangkat ini.'); }
+    const belakang = cameras.find(c => /back|rear|belakang/i.test(c.label));
+    const cameraId = (belakang || cameras[cameras.length-1]).id;
+    return scannerActive.start(
+      cameraId,
+      { fps: 10, qrbox: { width: 260, height: 160 } },
+      decodedText => onScanSuccess(decodedText),
+      ()=>{ /* frame tanpa hasil, diabaikan supaya tidak spam */ }
+    );
+  }).catch(err=>{
+    document.getElementById('scanHint').textContent = 'Tidak bisa mengakses kamera: ' + (err && err.message ? err.message : err);
+  });
+}
+
+function onScanSuccess(text){
+  if(scanTargetMode === 'append-textarea'){
+    const ta = document.getElementById(scanTargetId);
+    const lines = ta.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    if(lines.includes(text)){
+      document.getElementById('scanHint').textContent = `S/N "${text}" sudah ada di daftar. Arahkan ke barang berikutnya.`;
+    } else {
+      lines.push(text);
+      ta.value = lines.join('\n');
+      ta.dispatchEvent(new Event('input', {bubbles:true}));
+      document.getElementById('scanHint').textContent = `✓ Ditambahkan: ${text} — arahkan ke barang berikutnya, atau klik Selesai.`;
+    }
+  } else {
+    // single-input-search / single-input-trace: isi field lalu tutup scanner
+    const input = document.getElementById(scanTargetId);
+    input.value = text;
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+    closeScanner();
+    if(scanTargetMode === 'single-input-search'){ pageState.stok = 1; loadStok(); }
+    if(scanTargetMode === 'single-input-trace'){ doTrace(); }
+  }
+}
+
+function closeScanner(){
+  document.getElementById('overlayScan').classList.remove('show');
+  if(scannerActive){
+    scannerActive.stop().then(()=>scannerActive.clear()).catch(()=>{}).finally(()=>{ scannerActive = null; });
+  }
+}
+document.getElementById('btnScanClose').addEventListener('click', closeScanner);
 
 async function apiGet(action, params={}){
   if(action === 'ping') return {message:'Backend aktif'};
