@@ -134,6 +134,8 @@
   .subview.active{display:block;}
   .badge.Bagus{background:#e5f5ec;color:var(--green);}
   .badge.Dipinjam{background:#fff4e2;color:var(--amber-dark);}
+  .badge.Baru{background:#e5f5ec;color:var(--green);}
+  .badge.Bekas{background:#e6effa;color:var(--blue);}
   .filter-bar .field{min-width:160px;}
 
   table{width:100%;min-width:640px;border-collapse:collapse;font-size:12px;table-layout:fixed;}
@@ -256,8 +258,12 @@
       </div>
       <div class="cards" id="dashCards"></div>
       <div class="panel">
-        <h3>Stok per status</h3>
+        <h3>Stok per Lokasi</h3>
         <div class="status-grid" id="statusGrid"></div>
+      </div>
+      <div class="panel">
+        <h3>Stok per Status Barang</h3>
+        <div class="status-grid" id="kondisiGrid"></div>
       </div>
 
       <div class="panel">
@@ -343,11 +349,18 @@
       <div class="subview active" id="sub-stok-daftar">
         <div class="panel">
           <div class="filter-bar">
-            <div class="field"><label>Status</label>
+            <div class="field"><label>Lokasi</label>
               <select id="fStatus">
                 <option value="">Semua</option>
                 <option>Gudang</option>
                 <option>Terpasang</option>
+              </select>
+            </div>
+            <div class="field"><label>Status Barang</label>
+              <select id="fKondisi">
+                <option value="">Semua</option>
+                <option>Baru</option>
+                <option>Bekas</option>
                 <option>Hilang</option>
                 <option>Rusak</option>
               </select>
@@ -381,15 +394,21 @@
               <div class="field"><label>Brand Barang</label><input type="text" name="merk" id="saMerk" list="dlMerk" placeholder="pilih dari daftar atau ketik baru" autocomplete="off"></div>
               <div class="field"><label>Jumlah / Satuan</label><input type="number" min="1" name="qty" id="saQty" required></div>
               <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box" autocomplete="off"></div>
-              <div class="field"><label>Status</label>
-                <select name="status" id="saStatus">
-                  <option value="Gudang">Gudang</option>
-                  <option value="Terpasang">Terpasang</option>
+              <div class="field"><label>Status Barang</label>
+                <select name="kondisi" id="saKondisi">
+                  <option value="Baru">Baru</option>
+                  <option value="Bekas">Bekas</option>
                   <option value="Hilang">Hilang</option>
                   <option value="Rusak">Rusak</option>
                 </select>
               </div>
-              <div class="field" id="saLokasiBox" style="display:none;"><label>Lokasi</label><input type="text" name="lokasi" id="saLokasi" placeholder="mis. Kantor Klien - Lt 2"></div>
+              <div class="field"><label>Lokasi</label>
+                <select name="status" id="saLokasiStatus">
+                  <option value="Gudang">Gudang</option>
+                  <option value="Terpasang">Terpasang</option>
+                </select>
+              </div>
+              <div class="field" id="saLokasiBox" style="display:none;"><label>Detail Lokasi</label><input type="text" name="lokasi" id="saLokasi" placeholder="mis. Kantor Klien - Lt 2"></div>
               <div class="field"><label>Kategori</label><input type="text" name="kategori" id="saKategori" list="dlKategori" placeholder="opsional" autocomplete="off"></div>
               <div class="field"><label>No. Referensi / Invoice</label><input type="text" name="no_referensi" placeholder="opsional"></div>
               <div class="field full"><label>Catatan</label><input type="text" name="catatan" id="saCatatan" placeholder="opsional"></div>
@@ -746,8 +765,8 @@ const RPC_MAP = {
     map:rows=>rows.map(r=>({ID_Pembelian:r.id_pembelian, Tanggal:r.tanggal, Toko:r.toko, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Harga_Beli:r.harga_beli, Qty:r.qty, No_Referensi:r.no_referensi, Catatan:r.catatan, Dibuat_Pada:r.dibuat_pada, Dibuat_Oleh:r.dibuat_oleh}))
   },
   getStok: {
-    fn:'stok_list', build:p=>({p_status:p.status||null, p_kode_barang:p.kode_barang||null, p_toko:p.toko||null, p_sn:p.sn||null}),
-    map:rows=>rows.map(r=>({SN:r.sn, ID_Pembelian:r.id_pembelian, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Tanggal_Update:r.tanggal_update, Catatan:r.catatan, Kategori:r.kategori, Satuan:r.satuan}))
+    fn:'stok_list', build:p=>({p_status:p.status||null, p_kode_barang:p.kode_barang||null, p_toko:p.toko||null, p_sn:p.sn||null, p_kondisi:p.kondisi||null}),
+    map:rows=>rows.map(r=>({SN:r.sn, ID_Pembelian:r.id_pembelian, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Kondisi:r.kondisi, Tanggal_Update:r.tanggal_update, Catatan:r.catatan, Kategori:r.kategori, Satuan:r.satuan}))
   },
   traceSN: {
     fn:'stok_trace', build:p=>({p_sn:p.sn}),
@@ -756,7 +775,7 @@ const RPC_MAP = {
       if(!r.ditemukan) return {ditemukan:false};
       return {
         ditemukan:true,
-        stok:{SN:r.sn, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Tanggal_Update:r.tanggal_update, ID_Pembelian:r.id_pembelian},
+        stok:{SN:r.sn, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Kondisi:r.kondisi, Tanggal_Update:r.tanggal_update, ID_Pembelian:r.id_pembelian},
         pembelian:{No_Referensi:r.no_referensi},
         riwayat: r.riwayat || []
       };
@@ -771,13 +790,17 @@ const RPC_MAP = {
     map:rows=>{
       const r = rowOrEmpty(rows);
       return {total_unit:r.total_unit||0, total_jenis_barang:r.total_jenis_barang||0, nilai_stok_gudang:r.nilai_stok_gudang||0,
-        per_status:{Gudang:r.gudang||0, Terpasang:r.terpasang||0, Hilang:r.hilang||0, Rusak:r.rusak||0}};
+        per_lokasi:{Gudang:r.lokasi_gudang||0, Terpasang:r.lokasi_terpasang||0},
+        per_kondisi:{Baru:r.kondisi_baru||0, Bekas:r.kondisi_bekas||0, Hilang:r.kondisi_hilang||0, Rusak:r.kondisi_rusak||0},
+        tersedia_gudang:r.tersedia_gudang||0};
     }
   },
   getInventarisRingkasan: {
     fn:'inventaris_ringkasan', build:()=>({}),
     map:rows=>rows.map(r=>({kode_barang:r.kode_barang, nama_barang:r.nama_barang, merk:r.merk, kategori:r.kategori, satuan:r.satuan, total:r.total, nilai_gudang:r.nilai_gudang,
-      per_status:{Gudang:r.gudang||0, Terpasang:r.terpasang||0, Hilang:r.hilang||0, Rusak:r.rusak||0}}))
+      per_lokasi:{Gudang:r.lokasi_gudang||0, Terpasang:r.lokasi_terpasang||0},
+      per_kondisi:{Baru:r.kondisi_baru||0, Bekas:r.kondisi_bekas||0, Hilang:r.kondisi_hilang||0, Rusak:r.kondisi_rusak||0},
+      tersedia_gudang:r.tersedia_gudang||0}))
   },
   getAlat: {
     fn:'alat_list', build:p=>({p_lokasi:p.lokasi||null, p_kondisi:p.kondisi||null, p_cari:p.cari||null}),
@@ -799,7 +822,7 @@ const RPC_MAP = {
     fn:'pembelian_add',
     build:p=>({p_tanggal:p.tanggal, p_toko:p.toko, p_kode_barang:p.kode_barang, p_nama_barang:p.nama_barang, p_merk:p.merk||null,
       p_harga_beli: p.harga_beli ? Number(p.harga_beli) : null, p_qty:Number(p.qty), p_no_referensi:p.no_referensi||null, p_catatan:p.catatan||null,
-      p_sn_list:p.sn_list||null, p_status:p.status||'Gudang', p_lokasi:p.lokasi||null, p_kategori:p.kategori||null, p_satuan:p.satuan||null}),
+      p_sn_list:p.sn_list||null, p_status:p.status||'Gudang', p_lokasi:p.lokasi||null, p_kategori:p.kategori||null, p_satuan:p.satuan||null, p_kondisi:p.kondisi||'Baru'}),
     map:rows=>{ const r = rowOrEmpty(rows); return {id_pembelian:r.id_pembelian, sn_dibuat:r.sn_dibuat||[]}; }
   },
   updateStokStatus: {
@@ -808,7 +831,7 @@ const RPC_MAP = {
   },
   updateStokUnit: {
     fn:'stok_update_unit', build:p=>({p_sn_asli:p.sn_asli, p_sn_baru:p.sn_baru||null, p_kode_barang:p.kode_barang||null, p_nama_barang:p.nama_barang||null,
-      p_merk:p.merk||null, p_toko:p.toko||null, p_tanggal:p.tanggal||null, p_status:p.status||null, p_lokasi:p.lokasi||null, p_catatan:p.catatan||null}),
+      p_merk:p.merk||null, p_toko:p.toko||null, p_tanggal:p.tanggal||null, p_status:p.status||null, p_lokasi:p.lokasi||null, p_catatan:p.catatan||null, p_kondisi:p.kondisi||null}),
     map:rows=>{ const r = rowOrEmpty(rows); return {updated:true, sn_baru:r.sn_baru}; }
   },
   updateMasterBarang: {
@@ -1016,11 +1039,16 @@ function renderDashboard(d){
   document.getElementById('dashCards').innerHTML = `
     <div class="card accent"><div class="label">Total Unit Stok</div><div class="value">${d.total_unit}</div></div>
     <div class="card"><div class="label">Jenis Barang</div><div class="value">${d.total_jenis_barang}</div></div>
+    <div class="card"><div class="label">Tersedia di Gudang</div><div class="value">${d.tersedia_gudang}</div></div>
     ${currentCanSeeHarga ? `<div class="card"><div class="label">Nilai Stok di Gudang</div><div class="value">${rupiah(d.nilai_stok_gudang)}</div></div>` : ''}
   `;
-  const statuses = ['Gudang','Terpasang','Hilang','Rusak'];
-  document.getElementById('statusGrid').innerHTML = statuses.map(s=>`
-    <div class="status-chip"><div class="n">${d.per_status[s]||0}</div><div class="l">${s}</div></div>
+  const lokasi = ['Gudang','Terpasang'];
+  document.getElementById('statusGrid').innerHTML = lokasi.map(s=>`
+    <div class="status-chip"><div class="n">${d.per_lokasi[s]||0}</div><div class="l">${s}</div></div>
+  `).join('');
+  const kondisi = ['Baru','Bekas','Hilang','Rusak'];
+  document.getElementById('kondisiGrid').innerHTML = kondisi.map(s=>`
+    <div class="status-chip"><div class="n">${d.per_kondisi[s]||0}</div><div class="l">${s}</div></div>
   `).join('');
 }
 
@@ -1044,11 +1072,11 @@ async function loadDashStokGudang(){
   wrap.innerHTML = '<p class="empty">Memuat...</p>';
   try{
     const rows = await apiGet('getInventarisRingkasan');
-    dashRingkasanGudang = rows.filter(r => (r.per_status.Gudang||0) > 0);
+    dashRingkasanGudang = rows.filter(r => (r.tersedia_gudang||0) > 0);
 
     const prevVal = sel.value;
     sel.innerHTML = '<option value="">Semua jenis barang (ringkasan)</option>' +
-      dashRingkasanGudang.map((r,i)=>`<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — ${r.per_status.Gudang} unit</option>`).join('');
+      dashRingkasanGudang.map((r,i)=>`<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — ${r.tersedia_gudang} unit</option>`).join('');
     sel.value = prevVal;
 
     if(sel.value !== ''){
@@ -1072,7 +1100,7 @@ function renderDashStokRingkasan(){
   const pageItems = paginateRows('dashRingkasan', items);
   wrap.innerHTML = `
     <table>
-      <thead><tr><th>Nama Barang</th><th>Brand</th><th>Kode</th><th>Kategori</th><th>Satuan</th><th>Jumlah di Gudang</th></tr></thead>
+      <thead><tr><th>Nama Barang</th><th>Brand</th><th>Kode</th><th>Kategori</th><th>Satuan</th><th>Tersedia di Gudang</th></tr></thead>
       <tbody>
         ${pageItems.map(({r,i})=>`
           <tr style="cursor:pointer;" onclick="pilihJenisBarangDashboard(${i})">
@@ -1081,7 +1109,7 @@ function renderDashStokRingkasan(){
             <td class="sn-cell">${r.kode_barang}</td>
             <td>${r.kategori || '-'}</td>
             <td>${r.satuan || '-'}</td>
-            <td><strong>${r.per_status.Gudang}</strong></td>
+            <td><strong>${r.tersedia_gudang}</strong></td>
           </tr>
         `).join('')}
       </tbody>
@@ -1111,8 +1139,12 @@ async function renderDashStokDetail(index){
     const rowsMentah = await apiGet('getStok', {kode_barang: item.kode_barang, status: 'Gudang'});
     // Kode Barang saja tidak selalu unik per barang (ada kemungkinan dipakai
     // untuk beberapa nama berbeda) — saring lagi persis sesuai Nama & Merk
-    // yang dipilih, supaya S/N barang lain tidak ikut tercampur.
-    dashStokDetailRows = rowsMentah.filter(r => r.Nama_Barang === item.nama_barang && (r.Merk||'') === (item.merk||''));
+    // yang dipilih, dan hanya yang benar-benar "tersedia" (kondisi Baru/Bekas),
+    // supaya S/N barang lain atau yang Hilang/Rusak tidak ikut tercampur.
+    dashStokDetailRows = rowsMentah.filter(r =>
+      r.Nama_Barang === item.nama_barang && (r.Merk||'') === (item.merk||'') &&
+      (r.Kondisi === 'Baru' || r.Kondisi === 'Bekas')
+    );
     dashStokDetailIndex = index;
     pageState.dashDetail = 1;
     renderDashStokDetailPage();
@@ -1131,12 +1163,13 @@ function renderDashStokDetailPage(){
   wrap.innerHTML = `
     <p style="font-size:13px;margin:0 0 10px;"><button class="btn ghost small" onclick="document.getElementById('dashJenisBarang').value='';renderDashStokRingkasan();">← Kembali ke ringkasan</button></p>
     <table>
-      <thead><tr><th>S/N</th><th>Brand</th><th>Tanggal Masuk</th></tr></thead>
+      <thead><tr><th>S/N</th><th>Brand</th><th>Status Barang</th><th>Tanggal Masuk</th></tr></thead>
       <tbody>
         ${pageRows.map(r=>`
           <tr>
             <td class="sn-cell">${r.SN}</td>
             <td>${r.Merk || '-'}</td>
+            <td><span class="badge ${r.Kondisi}">${r.Kondisi}</span></td>
             <td>${fmtTgl(r.Tanggal_Beli)}</td>
           </tr>
         `).join('')}
@@ -1355,7 +1388,7 @@ document.getElementById('btnBatalTambahStok').addEventListener('click', ()=>{
   pindahKeSubTab('view-stok', 'stok-daftar');
 });
 
-document.getElementById('saStatus').addEventListener('change', e=>{
+document.getElementById('saLokasiStatus').addEventListener('change', e=>{
   const box = document.getElementById('saLokasiBox');
   if(e.target.value === 'Gudang'){
     box.style.display = 'none';
@@ -1410,7 +1443,8 @@ function editStokUnit(sn){
   document.getElementById('saQty').disabled = true;
   document.getElementById('saSatuan').value = item.Satuan || '';
   document.getElementById('saKategori').value = item.Kategori || '';
-  document.getElementById('saStatus').value = item.Status || 'Gudang';
+  document.getElementById('saKondisi').value = item.Kondisi || 'Baru';
+  document.getElementById('saLokasiStatus').value = item.Status || 'Gudang';
   document.getElementById('saCatatan').value = item.Catatan || '';
   document.getElementById('saSNList').value = item.SN || '';
   if(item.Status && item.Status !== 'Gudang'){
@@ -1523,13 +1557,13 @@ async function loadBarangTersediaUntukKeluar(){
   document.getElementById('kSNListItems').innerHTML = '';
   try{
     const rows = await apiGet('getInventarisRingkasan');
-    barangTersediaKeluar = rows.filter(r => (r.per_status.Gudang||0) > 0);
+    barangTersediaKeluar = rows.filter(r => (r.tersedia_gudang||0) > 0);
     if(barangTersediaKeluar.length === 0){
       sel.innerHTML = '<option value="">Tidak ada barang tersedia di Gudang</option>';
       return;
     }
     sel.innerHTML = '<option value="">Pilih barang yang tersedia di Gudang...</option>' +
-      barangTersediaKeluar.map((r,i)=>`<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — tersedia: ${r.per_status.Gudang}</option>`).join('');
+      barangTersediaKeluar.map((r,i)=>`<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — tersedia: ${r.tersedia_gudang}</option>`).join('');
   }catch(err){
     sel.innerHTML = '<option value="">Gagal memuat daftar barang</option>';
   }
@@ -1545,8 +1579,12 @@ document.getElementById('kKodeBarang').addEventListener('change', async e=>{
   try{
     const rowsMentah = await apiGet('getStok', {kode_barang: item.kode_barang, status: 'Gudang'});
     // Kode Barang saja tidak selalu unik per barang — saring lagi persis
-    // sesuai Nama & Merk yang dipilih, supaya S/N barang lain tidak ikut.
-    const rows = rowsMentah.filter(r => r.Nama_Barang === item.nama_barang && (r.Merk||'') === (item.merk||''));
+    // sesuai Nama & Merk yang dipilih, dan hanya kondisi Baru/Bekas
+    // (yang boleh diambil), supaya S/N lain tidak ikut.
+    const rows = rowsMentah.filter(r =>
+      r.Nama_Barang === item.nama_barang && (r.Merk||'') === (item.merk||'') &&
+      (r.Kondisi === 'Baru' || r.Kondisi === 'Bekas')
+    );
     if(rows.length === 0){
       listEl.innerHTML = '<span class="empty">Tidak ada unit tersedia.</span>';
       return;
@@ -1555,6 +1593,7 @@ document.getElementById('kKodeBarang').addEventListener('change', async e=>{
       <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13.5px;">
         <input type="checkbox" name="sn_pilih" value="${r.SN}" style="width:auto;">
         <span class="mono">${r.SN}</span>
+        <span class="badge ${r.Kondisi}" style="margin-left:4px;">${r.Kondisi}</span>
         <span style="color:var(--ink-soft);">— masuk ${fmtTgl(r.Tanggal_Beli)}</span>
       </label>
     `).join('');
@@ -1644,6 +1683,7 @@ async function loadStok(){
   try{
     const rows = await apiGet('getStok', {
       status: document.getElementById('fStatus').value,
+      kondisi: document.getElementById('fKondisi').value,
       kode_barang: document.getElementById('fKode').value,
       toko: document.getElementById('fToko').value,
       sn: document.getElementById('fSN').value
@@ -1660,10 +1700,10 @@ async function loadStok(){
 function renderStokTable(wrap, rows){
   const pageRows = paginateRows('stok', rows);
   wrap.innerHTML = `
-    <table style="min-width:1100px;">
+    <table style="min-width:1250px;">
       <thead><tr>
         <th>S/N</th><th>Kode</th><th>Nama Barang</th><th>Brand</th><th>Kategori</th><th>Satuan</th><th>Toko</th>${currentCanSeeHarga ? '<th>Harga Beli</th>' : ''}
-        <th>Tgl Beli</th><th>Status</th><th>Lokasi</th><th></th>
+        <th>Tgl Beli</th><th>Lokasi</th><th>Status Barang</th><th>Detail Lokasi</th><th></th>
       </tr></thead>
       <tbody>
         ${pageRows.map(r=>`
@@ -1678,6 +1718,7 @@ function renderStokTable(wrap, rows){
             ${currentCanSeeHarga ? `<td>${rupiah(r.Harga_Beli)}</td>` : ''}
             <td>${fmtTgl(r.Tanggal_Beli)}</td>
             <td><span class="badge ${r.Status}">${r.Status}</span></td>
+            <td><span class="badge ${r.Kondisi}">${r.Kondisi || '-'}</span></td>
             <td>${r.Lokasi || '-'}</td>
             <td>
               <button class="rowbtn" onclick="editStokUnit('${r.SN}')">Edit Data</button>
@@ -1755,8 +1796,9 @@ document.getElementById('btnExportStok').addEventListener('click', ()=>{
   if(currentCanSeeHarga) cols.push({label:'Harga Beli', value:'Harga_Beli'});
   cols.push(
     {label:'Tanggal Beli', value: r=>fmtTgl(r.Tanggal_Beli)},
-    {label:'Status', value:'Status'},
-    {label:'Lokasi', value:'Lokasi'},
+    {label:'Lokasi', value:'Status'},
+    {label:'Status Barang', value:'Kondisi'},
+    {label:'Detail Lokasi', value:'Lokasi'},
     {label:'ID Pembelian', value:'ID_Pembelian'}
   );
   exportCSV('stok-barang.csv', cols, lastStokRows);
@@ -1783,10 +1825,10 @@ async function loadInventaris(){
 function renderInventarisTable(wrap, rows){
   const pageRows = paginateRows('inventaris', rows);
   wrap.innerHTML = `
-    <table style="min-width:820px;">
+    <table style="min-width:1000px;">
       <thead><tr>
         <th>Kode</th><th>Nama Barang</th><th>Kategori</th><th>Satuan</th>
-        <th>Total Unit</th><th>Gudang</th><th>Terpasang</th><th>Hilang</th><th>Rusak</th>${currentCanSeeHarga ? '<th>Nilai di Gudang</th>' : ''}
+        <th>Total Unit</th><th>Tersedia di Gudang</th><th>Terpasang</th><th>Baru</th><th>Bekas</th><th>Hilang</th><th>Rusak</th>${currentCanSeeHarga ? '<th>Nilai di Gudang</th>' : ''}
       </tr></thead>
       <tbody>
         ${pageRows.map(r=>`
@@ -1796,10 +1838,12 @@ function renderInventarisTable(wrap, rows){
             <td>${r.kategori || '-'}</td>
             <td>${r.satuan || '-'}</td>
             <td><strong>${r.total}</strong></td>
-            <td>${r.per_status.Gudang||0}</td>
-            <td>${r.per_status.Terpasang||0}</td>
-            <td>${r.per_status.Hilang||0}</td>
-            <td>${r.per_status.Rusak||0}</td>
+            <td><strong>${r.tersedia_gudang||0}</strong></td>
+            <td>${r.per_lokasi.Terpasang||0}</td>
+            <td>${r.per_kondisi.Baru||0}</td>
+            <td>${r.per_kondisi.Bekas||0}</td>
+            <td>${r.per_kondisi.Hilang||0}</td>
+            <td>${r.per_kondisi.Rusak||0}</td>
             ${currentCanSeeHarga ? `<td>${rupiah(r.nilai_gudang)}</td>` : ''}
           </tr>
         `).join('')}
@@ -1816,10 +1860,12 @@ document.getElementById('btnExportInventaris').addEventListener('click', ()=>{
     {label:'Kategori', value:'kategori'},
     {label:'Satuan', value:'satuan'},
     {label:'Total Unit', value:'total'},
-    {label:'Gudang', value: r=>r.per_status.Gudang||0},
-    {label:'Terpasang', value: r=>r.per_status.Terpasang||0},
-    {label:'Hilang', value: r=>r.per_status.Hilang||0},
-    {label:'Rusak', value: r=>r.per_status.Rusak||0}
+    {label:'Tersedia di Gudang', value: r=>r.tersedia_gudang||0},
+    {label:'Terpasang', value: r=>r.per_lokasi.Terpasang||0},
+    {label:'Baru', value: r=>r.per_kondisi.Baru||0},
+    {label:'Bekas', value: r=>r.per_kondisi.Bekas||0},
+    {label:'Hilang', value: r=>r.per_kondisi.Hilang||0},
+    {label:'Rusak', value: r=>r.per_kondisi.Rusak||0}
   ];
   if(currentCanSeeHarga) cols.push({label:'Nilai di Gudang', value:'nilai_gudang'});
   exportCSV('inventaris-ringkasan.csv', cols, lastInventarisRows);
@@ -2044,8 +2090,9 @@ async function doTrace(){
           <div class="kv"><span class="k">S/N</span><span class="v mono">${s.SN}</span></div>
           <div class="kv"><span class="k">Kode / Nama Barang</span><span class="v">${s.Kode_Barang} — ${s.Nama_Barang}</span></div>
           <div class="kv"><span class="k">Brand</span><span class="v">${s.Merk || '-'}</span></div>
-          <div class="kv"><span class="k">Status Saat Ini</span><span class="v"><span class="badge ${s.Status}">${s.Status}</span></span></div>
-          <div class="kv"><span class="k">Lokasi Terpasang</span><span class="v">${s.Lokasi || '-'}</span></div>
+          <div class="kv"><span class="k">Lokasi</span><span class="v"><span class="badge ${s.Status}">${s.Status}</span></span></div>
+          <div class="kv"><span class="k">Status Barang</span><span class="v"><span class="badge ${s.Kondisi}">${s.Kondisi || '-'}</span></span></div>
+          <div class="kv"><span class="k">Detail Lokasi</span><span class="v">${s.Lokasi || '-'}</span></div>
           <div class="kv"><span class="k">Terakhir Diupdate</span><span class="v">${fmtDT(s.Tanggal_Update)}</span></div>
         </div>
         <div class="panel">
