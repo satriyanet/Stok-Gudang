@@ -400,6 +400,13 @@
               </div>
               <div class="field"><label id="saQtyLabel">Jumlah / Satuan</label><input type="number" min="1" name="qty" id="saQty" required></div>
               <div class="field" id="saPanjangMeterBox" style="display:none;"><label>Panjang per Gulungan (meter)</label><input type="number" min="0.01" step="0.01" name="panjang_meter" id="saPanjangMeter" placeholder="mis. 500"></div>
+              <div class="field full" id="saEditMeteranBox" style="display:none;">
+                <div class="form-grid" style="margin:0;">
+                  <div class="field"><label>Koreksi Panjang Awal (meter)</label><input type="number" min="0.01" step="0.01" name="qty_awal" id="saEditQtyAwal"></div>
+                  <div class="field"><label>Koreksi Sisa Saat Ini (meter)</label><input type="number" min="0" step="0.01" name="qty_sisa" id="saEditQtySisa"></div>
+                </div>
+                <p style="font-size:11.5px;color:var(--ink-soft);margin:6px 0 0;">Barang ini bertipe Meteran — koreksi di sini kalau panjang awal/sisa yang tercatat salah input.</p>
+              </div>
               <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box / meter" autocomplete="off"></div>
               <div class="field"><label>Status Barang</label>
                 <select name="kondisi" id="saKondisi">
@@ -860,7 +867,8 @@ const RPC_MAP = {
   },
   updateStokUnit: {
     fn:'stok_update_unit', build:p=>({p_sn_asli:p.sn_asli, p_sn_baru:p.sn_baru||null, p_kode_barang:p.kode_barang||null, p_nama_barang:p.nama_barang||null,
-      p_merk:p.merk||null, p_toko:p.toko||null, p_tanggal:p.tanggal||null, p_status:p.status||null, p_lokasi:p.lokasi||null, p_catatan:p.catatan||null, p_kondisi:p.kondisi||null}),
+      p_merk:p.merk||null, p_toko:p.toko||null, p_tanggal:p.tanggal||null, p_status:p.status||null, p_lokasi:p.lokasi||null, p_catatan:p.catatan||null, p_kondisi:p.kondisi||null,
+      p_qty_awal:p.qty_awal?Number(p.qty_awal):null, p_qty_sisa:p.qty_sisa!==undefined&&p.qty_sisa!==''?Number(p.qty_sisa):null}),
     map:rows=>{ const r = rowOrEmpty(rows); return {updated:true, sn_baru:r.sn_baru}; }
   },
   updateMasterBarang: {
@@ -1424,6 +1432,9 @@ function keluarModeEdit(){
   document.getElementById('saPanjangMeter').required = false;
   document.getElementById('saPanjangMeter').value = '';
   document.getElementById('saQtyLabel').textContent = 'Jumlah / Satuan';
+  document.getElementById('saEditMeteranBox').style.display = 'none';
+  document.getElementById('saEditQtyAwal').value = '';
+  document.getElementById('saEditQtySisa').value = '';
 }
 
 document.getElementById('btnBatalTambahStok').addEventListener('click', ()=>{
@@ -1515,6 +1526,16 @@ function editStokUnit(sn){
   } else {
     document.getElementById('saLokasiBox').style.display = 'none';
     document.getElementById('saLokasi').value = '';
+  }
+
+  if(item.Tipe_Stok === 'Meteran'){
+    document.getElementById('saEditMeteranBox').style.display = 'block';
+    document.getElementById('saEditQtyAwal').value = item.Qty_Awal || '';
+    document.getElementById('saEditQtySisa').value = item.Qty_Sisa || '';
+  } else {
+    document.getElementById('saEditMeteranBox').style.display = 'none';
+    document.getElementById('saEditQtyAwal').value = '';
+    document.getElementById('saEditQtySisa').value = '';
   }
 
   pindahKeSubTab('view-stok', 'stok-tambah');
