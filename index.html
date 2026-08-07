@@ -921,17 +921,28 @@ function openScanner(targetId, mode){
   }
   scanTargetId = targetId;
   scanTargetMode = mode;
-  document.getElementById('scanHint').textContent = 'Arahkan kamera ke barcode/QR pada barang. Izinkan akses kamera kalau diminta browser.';
+  document.getElementById('scanHint').textContent = 'Arahkan kamera ke barcode. Beri jarak secukupnya supaya seluruh garis barcode masuk ke kotak, hindari pantulan cahaya, dan tahan sebentar sampai terbaca.';
   document.getElementById('overlayScan').classList.add('show');
 
-  scannerActive = new Html5Qrcode('scanReader');
+  scannerActive = new Html5Qrcode('scanReader', {
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+  });
   Html5Qrcode.getCameras().then(cameras=>{
     if(!cameras || cameras.length === 0){ throw new Error('Kamera tidak ditemukan di perangkat ini.'); }
     const belakang = cameras.find(c => /back|rear|belakang/i.test(c.label));
     const cameraId = (belakang || cameras[cameras.length-1]).id;
     return scannerActive.start(
       cameraId,
-      { fps: 10, qrbox: { width: 260, height: 160 } },
+      {
+        fps: 10,
+        qrbox: { width: 300, height: 140 }, // kotak lebih lebar, cocok untuk barcode 1D yang memanjang
+        videoConstraints: {
+          deviceId: { exact: cameraId },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          focusMode: 'continuous'
+        }
+      },
       decodedText => onScanSuccess(decodedText),
       ()=>{ /* frame tanpa hasil, diabaikan supaya tidak spam */ }
     );
