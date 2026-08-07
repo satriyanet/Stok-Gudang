@@ -395,17 +395,17 @@
               <div class="field" id="saTipeStokBox"><label>Tipe Barang</label>
                 <select name="tipe_stok" id="saTipeStok">
                   <option value="Satuan">Satuan (per unit/S/N utuh)</option>
-                  <option value="Meteran">Meteran (bisa diambil sebagian, mis. kabel)</option>
+                  <option value="Meteran">Bisa Diambil Sebagian (mis. kabel per meter, atau 1 bungkus isi banyak pcs)</option>
                 </select>
               </div>
               <div class="field"><label id="saQtyLabel">Jumlah / Satuan</label><input type="number" min="1" name="qty" id="saQty" required></div>
-              <div class="field" id="saPanjangMeterBox" style="display:none;"><label>Panjang per Gulungan (meter)</label><input type="number" min="0.01" step="0.01" name="panjang_meter" id="saPanjangMeter" placeholder="mis. 500"></div>
+              <div class="field" id="saPanjangMeterBox" style="display:none;"><label>Isi per Kemasan (isi Satuan di atas, mis. meter/pcs/kg)</label><input type="number" min="0.01" step="0.01" name="panjang_meter" id="saPanjangMeter" placeholder="mis. 500 (meter) atau 50 (pcs)"></div>
               <div class="field full" id="saEditMeteranBox" style="display:none;">
                 <div class="form-grid" style="margin:0;">
-                  <div class="field"><label>Koreksi Panjang Awal (meter)</label><input type="number" min="0.01" step="0.01" name="qty_awal" id="saEditQtyAwal"></div>
-                  <div class="field"><label>Koreksi Sisa Saat Ini (meter)</label><input type="number" min="0" step="0.01" name="qty_sisa" id="saEditQtySisa"></div>
+                  <div class="field"><label>Koreksi Jumlah Awal</label><input type="number" min="0.01" step="0.01" name="qty_awal" id="saEditQtyAwal"></div>
+                  <div class="field"><label>Koreksi Sisa Saat Ini</label><input type="number" min="0" step="0.01" name="qty_sisa" id="saEditQtySisa"></div>
                 </div>
-                <p style="font-size:11.5px;color:var(--ink-soft);margin:6px 0 0;">Barang ini bertipe Meteran — koreksi di sini kalau panjang awal/sisa yang tercatat salah input.</p>
+                <p style="font-size:11.5px;color:var(--ink-soft);margin:6px 0 0;">Barang ini bisa diambil sebagian — koreksi di sini kalau jumlah awal/sisa yang tercatat salah input.</p>
               </div>
               <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box / meter" autocomplete="off"></div>
               <div class="field"><label>Status Barang</label>
@@ -475,12 +475,12 @@
 
               <!-- Mode Meteran -->
               <div class="field full" id="kMeteranBox" style="display:none;">
-                <label>Pilih Gulungan</label>
+                <label>Pilih Kemasan/Batch</label>
                 <select id="kGulungan">
                   <option value="">Pilih gulungan yang tersedia...</option>
                 </select>
                 <div style="margin-top:12px;">
-                  <label>Jumlah Meter yang Diambil</label>
+                  <label>Jumlah yang Diambil</label>
                   <input type="number" min="0.01" step="0.01" id="kJumlahMeter" placeholder="mis. 50">
                 </div>
               </div>
@@ -1014,6 +1014,9 @@ function rupiah(n){
   n = Number(n)||0;
   return 'Rp' + n.toLocaleString('id-ID');
 }
+function tipeStokLabel(v){
+  return v === 'Meteran' ? 'Bisa Dibagi' : 'Satuan';
+}
 function fmtTgl(v){
   if(!v) return '-';
   const d = new Date(v);
@@ -1146,7 +1149,7 @@ function renderDashStokRingkasan(){
             <td class="sn-cell">${r.kode_barang}</td>
             <td>${r.kategori || '-'}</td>
             <td>${r.satuan || '-'}</td>
-            <td><strong>${r.tersedia_gudang}${r.tipe_stok==='Meteran' ? ' m' : ''}</strong></td>
+            <td><strong>${r.tersedia_gudang}${r.tipe_stok==='Meteran' ? ' ' + (r.satuan||'') : ''}</strong></td>
           </tr>
         `).join('')}
       </tbody>
@@ -1209,7 +1212,7 @@ function renderDashStokDetailPage(){
             <td class="sn-cell">${r.SN}</td>
             <td>${r.Merk || '-'}</td>
             <td><span class="badge ${r.Kondisi}">${r.Kondisi}</span></td>
-            ${isMeteran ? `<td>${r.Qty_Sisa} / ${r.Qty_Awal} m</td>` : ''}
+            ${isMeteran ? `<td>${r.Qty_Sisa} / ${r.Qty_Awal} ${item.satuan||''}</td>` : ''}
             <td>${fmtTgl(r.Tanggal_Beli)}</td>
           </tr>
         `).join('')}
@@ -1651,7 +1654,7 @@ async function loadBarangTersediaUntukKeluar(){
     }
     sel.innerHTML = '<option value="">Pilih barang yang tersedia di Gudang...</option>' +
       barangTersediaKeluar.map((r,i)=>{
-        const satuanLabel = r.tipe_stok === 'Meteran' ? 'meter' : 'unit';
+        const satuanLabel = r.tipe_stok === 'Meteran' ? (r.satuan || 'satuan') : 'unit';
         return `<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — tersedia: ${r.tersedia_gudang} ${satuanLabel}</option>`;
       }).join('');
   }catch(err){
@@ -1676,7 +1679,7 @@ document.getElementById('kKodeBarang').addEventListener('change', async e=>{
   if(item.tipe_stok === 'Meteran'){
     satuanBox.style.display = 'none';
     meteranBox.style.display = 'block';
-    hint.textContent = 'Barang ini bertipe Meteran — pilih gulungan, lalu isi berapa meter yang diambil. Sisa gulungan otomatis terhitung.';
+    hint.textContent = 'Barang ini bisa diambil sebagian — pilih kemasan/batch-nya, lalu isi berapa jumlah yang diambil. Sisanya otomatis terhitung.';
     const selGulungan = document.getElementById('kGulungan');
     selGulungan.innerHTML = '<option value="">Memuat gulungan...</option>';
     try{
@@ -1690,7 +1693,7 @@ document.getElementById('kKodeBarang').addEventListener('change', async e=>{
         return;
       }
       selGulungan.innerHTML = '<option value="">Pilih gulungan...</option>' +
-        rows.map(r=>`<option value="${r.SN}" data-sisa="${r.Qty_Sisa}">${r.SN} — sisa ${r.Qty_Sisa} meter (masuk ${fmtTgl(r.Tanggal_Beli)})</option>`).join('');
+        rows.map(r=>`<option value="${r.SN}" data-sisa="${r.Qty_Sisa}">${r.SN} — sisa ${r.Qty_Sisa} ${item.satuan||''} (masuk ${fmtTgl(r.Tanggal_Beli)})</option>`).join('');
     }catch(err){
       selGulungan.innerHTML = '<option value="">Gagal memuat gulungan</option>';
     }
@@ -1751,7 +1754,7 @@ document.getElementById('formKeluar').addEventListener('submit', async e=>{
     try{
       const result = await apiPost('keluarMeteran', { sn, jumlah_meter: jumlahMeter, lokasi, catatan });
       msg.className = 'msg ok';
-      msg.textContent = `Tercatat. Diambil ${jumlahMeter} meter dari ${sn}. Sisa sekarang: ${result.sisa_baru} meter.`;
+      msg.textContent = `Tercatat. Diambil ${jumlahMeter} dari ${sn}. Sisa sekarang: ${result.sisa_baru}.`;
       e.target.reset();
       loadStok();
       loadDashboard();
@@ -1872,7 +1875,7 @@ function renderStokTable(wrap, rows){
             <td><span class="badge ${r.Status}">${r.Status}</span></td>
             <td><span class="badge ${r.Kondisi}">${r.Kondisi || '-'}</span></td>
             <td>${r.Lokasi || '-'}</td>
-            <td>${r.Tipe_Stok === 'Meteran' ? `${r.Qty_Sisa} / ${r.Qty_Awal} m` : '-'}</td>
+            <td>${r.Tipe_Stok === 'Meteran' ? `${r.Qty_Sisa} / ${r.Qty_Awal} ${r.Satuan||''}` : '-'}</td>
             <td>
               <button class="rowbtn" onclick="editStokUnit('${r.SN}')">Edit Data</button>
               ${currentCanSeeHarga ? `<button class="rowbtn" style="color:var(--red);border-color:var(--red);margin-left:4px;" onclick="hapusStokUnit('${r.SN}')">Hapus</button>` : ''}
@@ -1953,8 +1956,8 @@ document.getElementById('btnExportStok').addEventListener('click', ()=>{
     {label:'Status Barang', value:'Kondisi'},
     {label:'Detail Lokasi', value:'Lokasi'},
     {label:'Tipe Barang', value:'Tipe_Stok'},
-    {label:'Sisa (meter)', value: r=>r.Tipe_Stok==='Meteran' ? r.Qty_Sisa : ''},
-    {label:'Awal (meter)', value: r=>r.Tipe_Stok==='Meteran' ? r.Qty_Awal : ''},
+    {label:'Sisa', value: r=>r.Tipe_Stok==='Meteran' ? r.Qty_Sisa : ''},
+    {label:'Awal', value: r=>r.Tipe_Stok==='Meteran' ? r.Qty_Awal : ''},
     {label:'ID Pembelian', value:'ID_Pembelian'}
   );
   exportCSV('stok-barang.csv', cols, lastStokRows);
@@ -1991,7 +1994,7 @@ function renderInventarisTable(wrap, rows){
           <tr>
             <td class="sn-cell">${r.kode_barang}</td>
             <td>${r.nama_barang}</td>
-            <td><span class="badge ${r.tipe_stok==='Meteran'?'Bekas':'Baru'}">${r.tipe_stok}</span></td>
+            <td><span class="badge ${r.tipe_stok==='Meteran'?'Bekas':'Baru'}">${tipeStokLabel(r.tipe_stok)}</span></td>
             <td>${r.kategori || '-'}</td>
             <td>${r.satuan || '-'}</td>
             <td><strong>${r.total}</strong></td>
@@ -2250,7 +2253,7 @@ async function doTrace(){
           <div class="kv"><span class="k">Lokasi</span><span class="v"><span class="badge ${s.Status}">${s.Status}</span></span></div>
           <div class="kv"><span class="k">Status Barang</span><span class="v"><span class="badge ${s.Kondisi}">${s.Kondisi || '-'}</span></span></div>
           <div class="kv"><span class="k">Detail Lokasi</span><span class="v">${s.Lokasi || '-'}</span></div>
-          ${s.Tipe_Stok === 'Meteran' ? `<div class="kv"><span class="k">Sisa / Panjang Awal</span><span class="v">${s.Qty_Sisa} / ${s.Qty_Awal} meter</span></div>` : ''}
+          ${s.Tipe_Stok === 'Meteran' ? `<div class="kv"><span class="k">Sisa / Jumlah Awal</span><span class="v">${s.Qty_Sisa} / ${s.Qty_Awal}</span></div>` : ''}
           <div class="kv"><span class="k">Terakhir Diupdate</span><span class="v">${fmtDT(s.Tanggal_Update)}</span></div>
         </div>
         <div class="panel">
