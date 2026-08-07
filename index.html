@@ -392,8 +392,15 @@
               <div class="field"><label>Kode Barang</label><input type="text" name="kode_barang" id="saKodeBarang" list="dlKode" placeholder="mis. RTR-AX3000, atau pilih dari daftar" required autocomplete="off"></div>
               <div class="field"><label>Nama Barang</label><input type="text" name="nama_barang" id="saNamaBarang" list="dlNama" placeholder="pilih dari daftar atau ketik baru" required autocomplete="off"></div>
               <div class="field"><label>Brand Barang</label><input type="text" name="merk" id="saMerk" list="dlMerk" placeholder="pilih dari daftar atau ketik baru" autocomplete="off"></div>
-              <div class="field"><label>Jumlah / Satuan</label><input type="number" min="1" name="qty" id="saQty" required></div>
-              <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box" autocomplete="off"></div>
+              <div class="field" id="saTipeStokBox"><label>Tipe Barang</label>
+                <select name="tipe_stok" id="saTipeStok">
+                  <option value="Satuan">Satuan (per unit/S/N utuh)</option>
+                  <option value="Meteran">Meteran (bisa diambil sebagian, mis. kabel)</option>
+                </select>
+              </div>
+              <div class="field"><label id="saQtyLabel">Jumlah / Satuan</label><input type="number" min="1" name="qty" id="saQty" required></div>
+              <div class="field" id="saPanjangMeterBox" style="display:none;"><label>Panjang per Gulungan (meter)</label><input type="number" min="0.01" step="0.01" name="panjang_meter" id="saPanjangMeter" placeholder="mis. 500"></div>
+              <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box / meter" autocomplete="off"></div>
               <div class="field"><label>Status Barang</label>
                 <select name="kondisi" id="saKondisi">
                   <option value="Baru">Baru</option>
@@ -440,7 +447,7 @@
       <div class="subview" id="sub-stok-keluar">
         <div class="panel">
           <h3 style="margin:0 0 4px;">Barang Keluar / Pengambilan Barang</h3>
-          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">Pilih jenis barang, lalu centang S/N spesifik yang diambil (disarankan, agar mudah ditrace). Kalau barang ini tidak perlu dibedakan per S/N, biarkan tidak dicentang dan isi Jumlah saja — sistem otomatis memilih dari yang paling lama masuk.</p>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;" id="hintKeluar">Pilih jenis barang, lalu centang S/N spesifik yang diambil (disarankan, agar mudah ditrace). Kalau barang ini tidak perlu dibedakan per S/N, biarkan tidak dicentang dan isi Jumlah saja — sistem otomatis memilih dari yang paling lama masuk.</p>
           <form id="formKeluar">
             <div class="form-grid">
               <div class="field full">
@@ -449,13 +456,30 @@
                   <option value="">Pilih barang yang tersedia di Gudang...</option>
                 </select>
               </div>
-              <div class="field full" id="kSNListBox" style="display:none;">
-                <label>Pilih S/N (opsional — centang unit yang diambil)</label>
-                <div id="kSNListItems" style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:10px;"></div>
+
+              <!-- Mode Satuan -->
+              <div class="field full" id="kSatuanBox">
+                <div class="field full" id="kSNListBox" style="display:none;">
+                  <label>Pilih S/N (opsional — centang unit yang diambil)</label>
+                  <div id="kSNListItems" style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:10px;"></div>
+                </div>
+                <div class="field"><label>Jumlah (isi hanya jika tidak memilih S/N di atas)</label><input type="number" min="1" name="jumlah" id="kJumlah"></div>
               </div>
-              <div class="field"><label>Jumlah (isi hanya jika tidak memilih S/N di atas)</label><input type="number" min="1" name="jumlah" id="kJumlah"></div>
-              <div class="field"><label>Diambil Untuk / Lokasi Tujuan</label><input type="text" name="lokasi" placeholder="mis. Kantor Klien - Lt 2 / Tim Instalasi A" required></div>
-              <div class="field full"><label>Catatan</label><input type="text" name="catatan" placeholder="opsional"></div>
+
+              <!-- Mode Meteran -->
+              <div class="field full" id="kMeteranBox" style="display:none;">
+                <label>Pilih Gulungan</label>
+                <select id="kGulungan">
+                  <option value="">Pilih gulungan yang tersedia...</option>
+                </select>
+                <div style="margin-top:12px;">
+                  <label>Jumlah Meter yang Diambil</label>
+                  <input type="number" min="0.01" step="0.01" id="kJumlahMeter" placeholder="mis. 50">
+                </div>
+              </div>
+
+              <div class="field"><label>Diambil Untuk / Lokasi Tujuan</label><input type="text" name="lokasi" id="kLokasi" placeholder="mis. Kantor Klien - Lt 2 / Tim Instalasi A" required></div>
+              <div class="field full"><label>Catatan</label><input type="text" name="catatan" id="kCatatan" placeholder="opsional"></div>
             </div>
             <div style="margin-top:16px;">
               <button type="submit" class="btn">Catat Pengambilan</button>
@@ -754,7 +778,7 @@ const rowOrEmpty = rows => (Array.isArray(rows) && rows.length > 0) ? rows[0] : 
 const RPC_MAP = {
   getMasterBarang: {
     fn:'master_barang_list', build:()=>({}),
-    map:rows=>rows.map(r=>({Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Kategori:r.kategori, Satuan:r.satuan}))
+    map:rows=>rows.map(r=>({Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Kategori:r.kategori, Satuan:r.satuan, Tipe_Stok:r.tipe_stok||'Satuan'}))
   },
   getStokDistinctBarang: {
     fn:'stok_distinct_barang', build:()=>({}),
@@ -766,7 +790,7 @@ const RPC_MAP = {
   },
   getStok: {
     fn:'stok_list', build:p=>({p_status:p.status||null, p_kode_barang:p.kode_barang||null, p_toko:p.toko||null, p_sn:p.sn||null, p_kondisi:p.kondisi||null}),
-    map:rows=>rows.map(r=>({SN:r.sn, ID_Pembelian:r.id_pembelian, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Kondisi:r.kondisi, Tanggal_Update:r.tanggal_update, Catatan:r.catatan, Kategori:r.kategori, Satuan:r.satuan}))
+    map:rows=>rows.map(r=>({SN:r.sn, ID_Pembelian:r.id_pembelian, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Kondisi:r.kondisi, Tanggal_Update:r.tanggal_update, Catatan:r.catatan, Kategori:r.kategori, Satuan:r.satuan, Tipe_Stok:r.tipe_stok||'Satuan', Qty_Awal:r.qty_awal, Qty_Sisa:r.qty_sisa}))
   },
   traceSN: {
     fn:'stok_trace', build:p=>({p_sn:p.sn}),
@@ -775,7 +799,7 @@ const RPC_MAP = {
       if(!r.ditemukan) return {ditemukan:false};
       return {
         ditemukan:true,
-        stok:{SN:r.sn, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Kondisi:r.kondisi, Tanggal_Update:r.tanggal_update, ID_Pembelian:r.id_pembelian},
+        stok:{SN:r.sn, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Toko:r.toko, Harga_Beli:r.harga_beli, Tanggal_Beli:r.tanggal_beli, Status:r.status, Lokasi:r.lokasi, Kondisi:r.kondisi, Tanggal_Update:r.tanggal_update, ID_Pembelian:r.id_pembelian, Tipe_Stok:r.tipe_stok||'Satuan', Qty_Awal:r.qty_awal, Qty_Sisa:r.qty_sisa},
         pembelian:{No_Referensi:r.no_referensi},
         riwayat: r.riwayat || []
       };
@@ -797,7 +821,7 @@ const RPC_MAP = {
   },
   getInventarisRingkasan: {
     fn:'inventaris_ringkasan', build:()=>({}),
-    map:rows=>rows.map(r=>({kode_barang:r.kode_barang, nama_barang:r.nama_barang, merk:r.merk, kategori:r.kategori, satuan:r.satuan, total:r.total, nilai_gudang:r.nilai_gudang,
+    map:rows=>rows.map(r=>({kode_barang:r.kode_barang, nama_barang:r.nama_barang, merk:r.merk, kategori:r.kategori, satuan:r.satuan, tipe_stok:r.tipe_stok||'Satuan', total:r.total, nilai_gudang:r.nilai_gudang,
       per_lokasi:{Gudang:r.lokasi_gudang||0, Terpasang:r.lokasi_terpasang||0},
       per_kondisi:{Baru:r.kondisi_baru||0, Bekas:r.kondisi_bekas||0, Hilang:r.kondisi_hilang||0, Rusak:r.kondisi_rusak||0},
       tersedia_gudang:r.tersedia_gudang||0}))
@@ -822,8 +846,13 @@ const RPC_MAP = {
     fn:'pembelian_add',
     build:p=>({p_tanggal:p.tanggal, p_toko:p.toko, p_kode_barang:p.kode_barang, p_nama_barang:p.nama_barang, p_merk:p.merk||null,
       p_harga_beli: p.harga_beli ? Number(p.harga_beli) : null, p_qty:Number(p.qty), p_no_referensi:p.no_referensi||null, p_catatan:p.catatan||null,
-      p_sn_list:p.sn_list||null, p_status:p.status||'Gudang', p_lokasi:p.lokasi||null, p_kategori:p.kategori||null, p_satuan:p.satuan||null, p_kondisi:p.kondisi||'Baru'}),
+      p_sn_list:p.sn_list||null, p_status:p.status||'Gudang', p_lokasi:p.lokasi||null, p_kategori:p.kategori||null, p_satuan:p.satuan||null, p_kondisi:p.kondisi||'Baru',
+      p_tipe_stok:p.tipe_stok||'Satuan', p_panjang_meter:p.panjang_meter?Number(p.panjang_meter):null}),
     map:rows=>{ const r = rowOrEmpty(rows); return {id_pembelian:r.id_pembelian, sn_dibuat:r.sn_dibuat||[]}; }
+  },
+  keluarMeteran: {
+    fn:'stok_keluar_meteran', build:p=>({p_sn:p.sn, p_jumlah_meter:Number(p.jumlah_meter), p_lokasi:p.lokasi, p_catatan:p.catatan||null}),
+    map:rows=>{ const r = rowOrEmpty(rows); return {sisa_baru:r.sisa_baru}; }
   },
   updateStokStatus: {
     fn:'stok_update_status', build:p=>({p_sn:p.sn, p_status_baru:p.status_baru, p_lokasi:p.lokasi||null, p_catatan:p.catatan||null}),
@@ -1109,7 +1138,7 @@ function renderDashStokRingkasan(){
             <td class="sn-cell">${r.kode_barang}</td>
             <td>${r.kategori || '-'}</td>
             <td>${r.satuan || '-'}</td>
-            <td><strong>${r.tersedia_gudang}</strong></td>
+            <td><strong>${r.tersedia_gudang}${r.tipe_stok==='Meteran' ? ' m' : ''}</strong></td>
           </tr>
         `).join('')}
       </tbody>
@@ -1143,7 +1172,8 @@ async function renderDashStokDetail(index){
     // supaya S/N barang lain atau yang Hilang/Rusak tidak ikut tercampur.
     dashStokDetailRows = rowsMentah.filter(r =>
       r.Nama_Barang === item.nama_barang && (r.Merk||'') === (item.merk||'') &&
-      (r.Kondisi === 'Baru' || r.Kondisi === 'Bekas')
+      (r.Kondisi === 'Baru' || r.Kondisi === 'Bekas') &&
+      (item.tipe_stok !== 'Meteran' || Number(r.Qty_Sisa) > 0)
     );
     dashStokDetailIndex = index;
     pageState.dashDetail = 1;
@@ -1157,19 +1187,21 @@ function renderDashStokDetailPage(){
   const wrap = document.getElementById('dashStokWrap');
   const item = dashRingkasanGudang[dashStokDetailIndex];
   const judul = `${item.nama_barang}${item.merk ? ' — ' + item.merk : ''} (${item.kode_barang})`;
+  const isMeteran = item.tipe_stok === 'Meteran';
   if(dashStokDetailRows.length === 0){ wrap.innerHTML = `<p class="empty">Tidak ada unit "${judul}" di Gudang.</p>`; return; }
   RERENDER_FN.dashDetail = renderDashStokDetailPage;
   const pageRows = paginateRows('dashDetail', dashStokDetailRows);
   wrap.innerHTML = `
     <p style="font-size:13px;margin:0 0 10px;"><button class="btn ghost small" onclick="document.getElementById('dashJenisBarang').value='';renderDashStokRingkasan();">← Kembali ke ringkasan</button></p>
     <table>
-      <thead><tr><th>S/N</th><th>Brand</th><th>Status Barang</th><th>Tanggal Masuk</th></tr></thead>
+      <thead><tr><th>S/N</th><th>Brand</th><th>Status Barang</th>${isMeteran ? '<th>Sisa/Awal</th>' : ''}<th>Tanggal Masuk</th></tr></thead>
       <tbody>
         ${pageRows.map(r=>`
           <tr>
             <td class="sn-cell">${r.SN}</td>
             <td>${r.Merk || '-'}</td>
             <td><span class="badge ${r.Kondisi}">${r.Kondisi}</span></td>
+            ${isMeteran ? `<td>${r.Qty_Sisa} / ${r.Qty_Awal} m</td>` : ''}
             <td>${fmtTgl(r.Tanggal_Beli)}</td>
           </tr>
         `).join('')}
@@ -1216,7 +1248,7 @@ async function loadMasterBarang(){
       if(!r.Kode_Barang) return;
       if(!masterKodeToNama[r.Kode_Barang]) masterKodeToNama[r.Kode_Barang] = r.Nama_Barang;
       if(!masterNamaToKode[r.Nama_Barang]) masterNamaToKode[r.Nama_Barang] = r.Kode_Barang;
-      if(!masterByKode[r.Kode_Barang]) masterByKode[r.Kode_Barang] = {Kode_Barang:r.Kode_Barang, Nama_Barang:r.Nama_Barang, Merk:r.Merk, Kategori:'', Satuan:''};
+      if(!masterByKode[r.Kode_Barang]) masterByKode[r.Kode_Barang] = {Kode_Barang:r.Kode_Barang, Nama_Barang:r.Nama_Barang, Merk:r.Merk, Kategori:'', Satuan:'', Tipe_Stok:'Satuan'};
       if(r.Merk) merkSet.add(r.Merk);
     });
 
@@ -1275,6 +1307,11 @@ function fillFromMasterInto(kode, ids){
   if(m.Merk) document.getElementById(ids.merk).value = m.Merk;
   if(m.Kategori) document.getElementById(ids.kategori).value = m.Kategori;
   if(m.Satuan) document.getElementById(ids.satuan).value = m.Satuan;
+  if(ids.tipeStok && m.Tipe_Stok){
+    const el = document.getElementById(ids.tipeStok);
+    el.value = m.Tipe_Stok;
+    el.dispatchEvent(new Event('change', {bubbles:true}));
+  }
 }
 function fillFromMaster(kode){
   fillFromMasterInto(kode, {nama:'pNamaBarang', merk:'pMerk', kategori:'pKategori', satuan:'pSatuan'});
@@ -1290,14 +1327,14 @@ document.getElementById('pNamaBarang').addEventListener('input', e=>{
 
 document.getElementById('saKodeBarang').addEventListener('input', e=>{
   if(masterKodeToNama[e.target.value]){
-    fillFromMasterInto(e.target.value, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan'});
+    fillFromMasterInto(e.target.value, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan', tipeStok:'saTipeStok'});
   }
 });
 document.getElementById('saNamaBarang').addEventListener('input', e=>{
   const kode = masterNamaToKode[e.target.value];
   if(kode){
     document.getElementById('saKodeBarang').value = kode;
-    fillFromMasterInto(kode, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan'});
+    fillFromMasterInto(kode, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan', tipeStok:'saTipeStok'});
   }
 });
 
@@ -1381,6 +1418,12 @@ function keluarModeEdit(){
   document.getElementById('saSNList').required = true;
   document.getElementById('saSNList').placeholder = 'SN00123\nSN00124\nSN00125';
   document.getElementById('saBtnScan').style.display = 'inline-block';
+  document.getElementById('saTipeStokBox').style.display = 'block';
+  document.getElementById('saTipeStok').value = 'Satuan';
+  document.getElementById('saPanjangMeterBox').style.display = 'none';
+  document.getElementById('saPanjangMeter').required = false;
+  document.getElementById('saPanjangMeter').value = '';
+  document.getElementById('saQtyLabel').textContent = 'Jumlah / Satuan';
 }
 
 document.getElementById('btnBatalTambahStok').addEventListener('click', ()=>{
@@ -1395,6 +1438,22 @@ document.getElementById('saLokasiStatus').addEventListener('change', e=>{
     document.getElementById('saLokasi').value = '';
   } else {
     box.style.display = 'block';
+  }
+});
+
+document.getElementById('saTipeStok').addEventListener('change', e=>{
+  const panjangBox = document.getElementById('saPanjangMeterBox');
+  const qtyLabel = document.getElementById('saQtyLabel');
+  const panjangInput = document.getElementById('saPanjangMeter');
+  if(e.target.value === 'Meteran'){
+    panjangBox.style.display = 'block';
+    panjangInput.required = true;
+    qtyLabel.textContent = 'Jumlah Gulungan';
+  } else {
+    panjangBox.style.display = 'none';
+    panjangInput.required = false;
+    panjangInput.value = '';
+    qtyLabel.textContent = 'Jumlah / Satuan';
   }
 });
 
@@ -1432,6 +1491,9 @@ function editStokUnit(sn){
   document.getElementById('saSNList').disabled = false;
   document.getElementById('saSNList').required = true;
   document.getElementById('saBtnScan').style.display = 'inline-block';
+  document.getElementById('saTipeStokBox').style.display = 'none';
+  document.getElementById('saPanjangMeterBox').style.display = 'none';
+  document.getElementById('saPanjangMeter').required = false;
 
   const tgl = item.Tanggal_Beli ? new Date(item.Tanggal_Beli) : null;
   document.getElementById('saTanggal').value = tgl && !isNaN(tgl) ? tgl.toISOString().slice(0,10) : '';
@@ -1545,6 +1607,8 @@ document.getElementById('btnBatalKeluar').addEventListener('click', ()=>{
   document.getElementById('formKeluar').reset();
   document.getElementById('kSNListBox').style.display = 'none';
   document.getElementById('kSNListItems').innerHTML = '';
+  document.getElementById('kSatuanBox').style.display = 'block';
+  document.getElementById('kMeteranBox').style.display = 'none';
   pindahKeSubTab('view-stok', 'stok-daftar');
 });
 
@@ -1555,6 +1619,8 @@ async function loadBarangTersediaUntukKeluar(){
   sel.innerHTML = '<option value="">Memuat...</option>';
   document.getElementById('kSNListBox').style.display = 'none';
   document.getElementById('kSNListItems').innerHTML = '';
+  document.getElementById('kSatuanBox').style.display = 'block';
+  document.getElementById('kMeteranBox').style.display = 'none';
   try{
     const rows = await apiGet('getInventarisRingkasan');
     barangTersediaKeluar = rows.filter(r => (r.tersedia_gudang||0) > 0);
@@ -1563,17 +1629,59 @@ async function loadBarangTersediaUntukKeluar(){
       return;
     }
     sel.innerHTML = '<option value="">Pilih barang yang tersedia di Gudang...</option>' +
-      barangTersediaKeluar.map((r,i)=>`<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — tersedia: ${r.tersedia_gudang}</option>`).join('');
+      barangTersediaKeluar.map((r,i)=>{
+        const satuanLabel = r.tipe_stok === 'Meteran' ? 'meter' : 'unit';
+        return `<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — tersedia: ${r.tersedia_gudang} ${satuanLabel}</option>`;
+      }).join('');
   }catch(err){
     sel.innerHTML = '<option value="">Gagal memuat daftar barang</option>';
   }
 }
 
 document.getElementById('kKodeBarang').addEventListener('change', async e=>{
+  const item = barangTersediaKeluar[e.target.value];
+  const satuanBox = document.getElementById('kSatuanBox');
+  const meteranBox = document.getElementById('kMeteranBox');
+  const hint = document.getElementById('hintKeluar');
+
+  if(!item){
+    satuanBox.style.display = 'block';
+    meteranBox.style.display = 'none';
+    document.getElementById('kSNListBox').style.display = 'none';
+    document.getElementById('kSNListItems').innerHTML = '';
+    return;
+  }
+
+  if(item.tipe_stok === 'Meteran'){
+    satuanBox.style.display = 'none';
+    meteranBox.style.display = 'block';
+    hint.textContent = 'Barang ini bertipe Meteran — pilih gulungan, lalu isi berapa meter yang diambil. Sisa gulungan otomatis terhitung.';
+    const selGulungan = document.getElementById('kGulungan');
+    selGulungan.innerHTML = '<option value="">Memuat gulungan...</option>';
+    try{
+      const rowsMentah = await apiGet('getStok', {kode_barang: item.kode_barang, status: 'Gudang'});
+      const rows = rowsMentah.filter(r =>
+        r.Nama_Barang === item.nama_barang && (r.Merk||'') === (item.merk||'') &&
+        (r.Kondisi === 'Baru' || r.Kondisi === 'Bekas') && Number(r.Qty_Sisa) > 0
+      );
+      if(rows.length === 0){
+        selGulungan.innerHTML = '<option value="">Tidak ada gulungan tersedia</option>';
+        return;
+      }
+      selGulungan.innerHTML = '<option value="">Pilih gulungan...</option>' +
+        rows.map(r=>`<option value="${r.SN}" data-sisa="${r.Qty_Sisa}">${r.SN} — sisa ${r.Qty_Sisa} meter (masuk ${fmtTgl(r.Tanggal_Beli)})</option>`).join('');
+    }catch(err){
+      selGulungan.innerHTML = '<option value="">Gagal memuat gulungan</option>';
+    }
+    return;
+  }
+
+  // Mode Satuan (seperti sebelumnya)
+  satuanBox.style.display = 'block';
+  meteranBox.style.display = 'none';
+  hint.textContent = 'Pilih jenis barang, lalu centang S/N spesifik yang diambil (disarankan, agar mudah ditrace). Kalau barang ini tidak perlu dibedakan per S/N, biarkan tidak dicentang dan isi Jumlah saja — sistem otomatis memilih dari yang paling lama masuk.';
   const box = document.getElementById('kSNListBox');
   const listEl = document.getElementById('kSNListItems');
-  const item = barangTersediaKeluar[e.target.value];
-  if(!item){ box.style.display = 'none'; listEl.innerHTML = ''; return; }
   listEl.innerHTML = 'Memuat daftar S/N...';
   box.style.display = 'block';
   try{
@@ -1611,7 +1719,30 @@ document.getElementById('formKeluar').addEventListener('submit', async e=>{
   const fd = new FormData(e.target);
   const item = barangTersediaKeluar[fd.get('kode_barang')];
   if(!item){ msg.className='msg err'; msg.textContent='Pilih jenis barang dulu.'; return; }
-  const payload = { kode_barang: item.kode_barang, lokasi: fd.get('lokasi'), catatan: fd.get('catatan') };
+  const lokasi = document.getElementById('kLokasi').value;
+  const catatan = document.getElementById('kCatatan').value;
+
+  if(item.tipe_stok === 'Meteran'){
+    const sn = document.getElementById('kGulungan').value;
+    const jumlahMeter = document.getElementById('kJumlahMeter').value;
+    if(!sn){ msg.className='msg err'; msg.textContent='Pilih gulungan dulu.'; return; }
+    if(!jumlahMeter || Number(jumlahMeter) <= 0){ msg.className='msg err'; msg.textContent='Isi jumlah meter yang diambil.'; return; }
+    try{
+      const result = await apiPost('keluarMeteran', { sn, jumlah_meter: jumlahMeter, lokasi, catatan });
+      msg.className = 'msg ok';
+      msg.textContent = `Tercatat. Diambil ${jumlahMeter} meter dari ${sn}. Sisa sekarang: ${result.sisa_baru} meter.`;
+      e.target.reset();
+      loadStok();
+      loadDashboard();
+      loadBarangTersediaUntukKeluar();
+    }catch(err){
+      msg.className = 'msg err';
+      msg.textContent = 'Gagal mencatat: ' + err.message;
+    }
+    return;
+  }
+
+  const payload = { kode_barang: item.kode_barang, lokasi, catatan };
   const snPilih = Array.from(document.querySelectorAll('input[name="sn_pilih"]:checked')).map(el=>el.value);
 
   if(snPilih.length > 0){
@@ -1700,10 +1831,10 @@ async function loadStok(){
 function renderStokTable(wrap, rows){
   const pageRows = paginateRows('stok', rows);
   wrap.innerHTML = `
-    <table style="min-width:1250px;">
+    <table style="min-width:1350px;">
       <thead><tr>
         <th>S/N</th><th>Kode</th><th>Nama Barang</th><th>Brand</th><th>Kategori</th><th>Satuan</th><th>Toko</th>${currentCanSeeHarga ? '<th>Harga Beli</th>' : ''}
-        <th>Tgl Beli</th><th>Lokasi</th><th>Status Barang</th><th>Detail Lokasi</th><th></th>
+        <th>Tgl Beli</th><th>Lokasi</th><th>Status Barang</th><th>Detail Lokasi</th><th>Sisa/Awal</th><th></th>
       </tr></thead>
       <tbody>
         ${pageRows.map(r=>`
@@ -1720,6 +1851,7 @@ function renderStokTable(wrap, rows){
             <td><span class="badge ${r.Status}">${r.Status}</span></td>
             <td><span class="badge ${r.Kondisi}">${r.Kondisi || '-'}</span></td>
             <td>${r.Lokasi || '-'}</td>
+            <td>${r.Tipe_Stok === 'Meteran' ? `${r.Qty_Sisa} / ${r.Qty_Awal} m` : '-'}</td>
             <td>
               <button class="rowbtn" onclick="editStokUnit('${r.SN}')">Edit Data</button>
               ${currentCanSeeHarga ? `<button class="rowbtn" style="color:var(--red);border-color:var(--red);margin-left:4px;" onclick="hapusStokUnit('${r.SN}')">Hapus</button>` : ''}
@@ -1799,6 +1931,9 @@ document.getElementById('btnExportStok').addEventListener('click', ()=>{
     {label:'Lokasi', value:'Status'},
     {label:'Status Barang', value:'Kondisi'},
     {label:'Detail Lokasi', value:'Lokasi'},
+    {label:'Tipe Barang', value:'Tipe_Stok'},
+    {label:'Sisa (meter)', value: r=>r.Tipe_Stok==='Meteran' ? r.Qty_Sisa : ''},
+    {label:'Awal (meter)', value: r=>r.Tipe_Stok==='Meteran' ? r.Qty_Awal : ''},
     {label:'ID Pembelian', value:'ID_Pembelian'}
   );
   exportCSV('stok-barang.csv', cols, lastStokRows);
@@ -1825,9 +1960,9 @@ async function loadInventaris(){
 function renderInventarisTable(wrap, rows){
   const pageRows = paginateRows('inventaris', rows);
   wrap.innerHTML = `
-    <table style="min-width:1000px;">
+    <table style="min-width:1080px;">
       <thead><tr>
-        <th>Kode</th><th>Nama Barang</th><th>Kategori</th><th>Satuan</th>
+        <th>Kode</th><th>Nama Barang</th><th>Tipe</th><th>Kategori</th><th>Satuan</th>
         <th>Total Unit</th><th>Tersedia di Gudang</th><th>Terpasang</th><th>Baru</th><th>Bekas</th><th>Hilang</th><th>Rusak</th>${currentCanSeeHarga ? '<th>Nilai di Gudang</th>' : ''}
       </tr></thead>
       <tbody>
@@ -1835,10 +1970,11 @@ function renderInventarisTable(wrap, rows){
           <tr>
             <td class="sn-cell">${r.kode_barang}</td>
             <td>${r.nama_barang}</td>
+            <td><span class="badge ${r.tipe_stok==='Meteran'?'Bekas':'Baru'}">${r.tipe_stok}</span></td>
             <td>${r.kategori || '-'}</td>
             <td>${r.satuan || '-'}</td>
             <td><strong>${r.total}</strong></td>
-            <td><strong>${r.tersedia_gudang||0}</strong></td>
+            <td><strong>${r.tersedia_gudang||0}${r.tipe_stok==='Meteran' ? ' m' : ''}</strong></td>
             <td>${r.per_lokasi.Terpasang||0}</td>
             <td>${r.per_kondisi.Baru||0}</td>
             <td>${r.per_kondisi.Bekas||0}</td>
@@ -2093,6 +2229,7 @@ async function doTrace(){
           <div class="kv"><span class="k">Lokasi</span><span class="v"><span class="badge ${s.Status}">${s.Status}</span></span></div>
           <div class="kv"><span class="k">Status Barang</span><span class="v"><span class="badge ${s.Kondisi}">${s.Kondisi || '-'}</span></span></div>
           <div class="kv"><span class="k">Detail Lokasi</span><span class="v">${s.Lokasi || '-'}</span></div>
+          ${s.Tipe_Stok === 'Meteran' ? `<div class="kv"><span class="k">Sisa / Panjang Awal</span><span class="v">${s.Qty_Sisa} / ${s.Qty_Awal} meter</span></div>` : ''}
           <div class="kv"><span class="k">Terakhir Diupdate</span><span class="v">${fmtDT(s.Tanggal_Update)}</span></div>
         </div>
         <div class="panel">
