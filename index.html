@@ -1275,35 +1275,41 @@ async function loadMasterBarang(){
     const satuanSet = new Set();
     const merkSet = new Set();
 
-    // Utamakan data dari master_barang (punya Kategori/Satuan lengkap),
-    // lalu tambahkan barang yang tercatat di Stok tapi belum ada di
-    // master_barang, supaya dropdown selalu sesuai dengan Daftar Stok.
+    const masterLookup = {}; // kode -> data master_barang (Kategori/Satuan/Tipe_Stok), untuk pelengkap saja
     masterRows.forEach(r=>{
-      masterKodeToNama[r.Kode_Barang] = r.Nama_Barang;
-      masterNamaToKode[r.Nama_Barang] = r.Kode_Barang;
-      masterByKode[r.Kode_Barang] = r;
+      masterLookup[r.Kode_Barang] = r;
       if(r.Kategori) kategoriSet.add(r.Kategori);
       if(r.Satuan) satuanSet.add(r.Satuan);
       if(r.Merk) merkSet.add(r.Merk);
     });
+
+    // Daftar saran Kode/Nama Barang HANYA dari barang yang benar-benar
+    // masih ada di Stok saat ini — supaya barang yang semua unitnya
+    // sudah dihapus otomatis hilang dari pilihan (tidak menumpuk terus).
     stokRows.forEach(r=>{
       if(!r.Kode_Barang) return;
-      if(!masterKodeToNama[r.Kode_Barang]) masterKodeToNama[r.Kode_Barang] = r.Nama_Barang;
-      if(!masterNamaToKode[r.Nama_Barang]) masterNamaToKode[r.Nama_Barang] = r.Kode_Barang;
-      if(!masterByKode[r.Kode_Barang]) masterByKode[r.Kode_Barang] = {Kode_Barang:r.Kode_Barang, Nama_Barang:r.Nama_Barang, Merk:r.Merk, Kategori:'', Satuan:'', Tipe_Stok:'Satuan'};
+      masterKodeToNama[r.Kode_Barang] = r.Nama_Barang;
+      masterNamaToKode[r.Nama_Barang] = r.Kode_Barang;
+      const meta = masterLookup[r.Kode_Barang] || {};
+      masterByKode[r.Kode_Barang] = {
+        Kode_Barang: r.Kode_Barang, Nama_Barang: r.Nama_Barang, Merk: r.Merk,
+        Kategori: meta.Kategori || '', Satuan: meta.Satuan || '', Tipe_Stok: meta.Tipe_Stok || 'Satuan'
+      };
       if(r.Merk) merkSet.add(r.Merk);
     });
 
     const rows = Object.values(masterByKode);
-    document.getElementById('dlKode').innerHTML = rows.map(r=>`<option value="${r.Kode_Barang}">${r.Nama_Barang}</option>`).join('');
-    document.getElementById('dlNama').innerHTML = rows.map(r=>`<option value="${r.Nama_Barang}">${r.Kode_Barang}</option>`).join('');
-    document.getElementById('dlKategori').innerHTML = [...kategoriSet].map(k=>`<option value="${k}"></option>`).join('');
-    document.getElementById('dlSatuan').innerHTML = [...satuanSet].map(s=>`<option value="${s}"></option>`).join('');
-    document.getElementById('dlMerk').innerHTML = [...merkSet].map(m=>`<option value="${m}"></option>`).join('');
+    const rowsByKode = [...rows].sort((a,b)=>String(a.Kode_Barang).localeCompare(String(b.Kode_Barang),'id'));
+    const rowsByNama = [...rows].sort((a,b)=>String(a.Nama_Barang).localeCompare(String(b.Nama_Barang),'id'));
+    document.getElementById('dlKode').innerHTML = rowsByKode.map(r=>`<option value="${r.Kode_Barang}">${r.Nama_Barang}</option>`).join('');
+    document.getElementById('dlNama').innerHTML = rowsByNama.map(r=>`<option value="${r.Nama_Barang}">${r.Kode_Barang}</option>`).join('');
+    document.getElementById('dlKategori').innerHTML = [...kategoriSet].sort((a,b)=>a.localeCompare(b,'id')).map(k=>`<option value="${k}"></option>`).join('');
+    document.getElementById('dlSatuan').innerHTML = [...satuanSet].sort((a,b)=>a.localeCompare(b,'id')).map(s=>`<option value="${s}"></option>`).join('');
+    document.getElementById('dlMerk').innerHTML = [...merkSet].sort((a,b)=>a.localeCompare(b,'id')).map(m=>`<option value="${m}"></option>`).join('');
 
     const fKode = document.getElementById('fKode');
     const prevVal = fKode.value;
-    fKode.innerHTML = '<option value="">Semua</option>' + rows.map(r=>`<option value="${r.Kode_Barang}">${r.Kode_Barang} — ${r.Nama_Barang}</option>`).join('');
+    fKode.innerHTML = '<option value="">Semua</option>' + rowsByKode.map(r=>`<option value="${r.Kode_Barang}">${r.Kode_Barang} — ${r.Nama_Barang}</option>`).join('');
     fKode.value = prevVal;
   }catch(err){
     // Gagal memuat daftar jenis barang tidak menghentikan aplikasi, cukup diabaikan (field tetap bisa diisi manual)
@@ -1342,43 +1348,12 @@ document.getElementById('saSNList').addEventListener('input', ()=>{
   cekSNDobel('saSNList', 'saSNWarning', editingSN);
 });
 
-function fillFromMasterInto(kode, ids){
-  const m = masterByKode[kode];
-  if(!m) return;
-  document.getElementById(ids.nama).value = m.Nama_Barang;
-  if(m.Merk) document.getElementById(ids.merk).value = m.Merk;
-  if(m.Kategori) document.getElementById(ids.kategori).value = m.Kategori;
-  if(m.Satuan) document.getElementById(ids.satuan).value = m.Satuan;
-  if(ids.tipeStok && m.Tipe_Stok){
-    const el = document.getElementById(ids.tipeStok);
-    el.value = m.Tipe_Stok;
-    el.dispatchEvent(new Event('change', {bubbles:true}));
-  }
-}
-function fillFromMaster(kode){
-  fillFromMasterInto(kode, {nama:'pNamaBarang', merk:'pMerk', kategori:'pKategori', satuan:'pSatuan'});
-}
-
-document.getElementById('pKodeBarang').addEventListener('input', e=>{
-  if(masterKodeToNama[e.target.value]) fillFromMaster(e.target.value);
-});
-document.getElementById('pNamaBarang').addEventListener('input', e=>{
-  const kode = masterNamaToKode[e.target.value];
-  if(kode){ document.getElementById('pKodeBarang').value = kode; fillFromMaster(kode); }
-});
-
-document.getElementById('saKodeBarang').addEventListener('input', e=>{
-  if(masterKodeToNama[e.target.value]){
-    fillFromMasterInto(e.target.value, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan', tipeStok:'saTipeStok'});
-  }
-});
-document.getElementById('saNamaBarang').addEventListener('input', e=>{
-  const kode = masterNamaToKode[e.target.value];
-  if(kode){
-    document.getElementById('saKodeBarang').value = kode;
-    fillFromMasterInto(kode, {nama:'saNamaBarang', merk:'saMerk', kategori:'saKategori', satuan:'saSatuan', tipeStok:'saTipeStok'});
-  }
-});
+// Catatan: sebelumnya Kode Barang & Nama Barang saling mengisi otomatis
+// (pilih salah satu, yang lain ikut terisi). Ini SENGAJA dimatikan —
+// karena di lapangan, satu Kode Barang bisa dipakai untuk beberapa Nama
+// Barang berbeda (dan sebaliknya), jadi auto-isi malah menimpa data yang
+// benar. Sekarang tiap field independen — saran (autocomplete) tetap
+// jalan lewat setupAutocomplete, cuma tidak lagi saling mengisi field lain.
 
 /* ---------- Dropdown kustom (maks 5 terlihat, bisa di-scroll, selalu ambil data terbaru) ---------- */
 function setupAutocomplete(input, getOptions){
@@ -1397,7 +1372,7 @@ function setupAutocomplete(input, getOptions){
 
   function show(){
     const val = input.value.trim().toLowerCase();
-    const all = [...new Set(getOptions().filter(Boolean))];
+    const all = [...new Set(getOptions().filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'id'));
     const opts = (val ? all.filter(o=>o.toLowerCase().includes(val)) : all).slice(0, 100);
     if(opts.length === 0){ dd.style.display='none'; return; }
     dd.innerHTML = opts.map(o=>`<div class="ac-item">${o}</div>`).join('');
@@ -1898,6 +1873,43 @@ document.getElementById('formPembelian').addEventListener('submit', async e=>{
 document.getElementById('btnFilterStok').addEventListener('click', ()=>{ pageState.stok = 1; loadStok(); });
 let lastStokRows = [];
 
+let stokSort = { col: null, dir: 'asc' };
+
+function sortStokBy(col){
+  if(stokSort.col === col){
+    stokSort.dir = stokSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    stokSort.col = col;
+    stokSort.dir = 'asc';
+  }
+  pageState.stok = 1;
+  RERENDER_FN.stok && RERENDER_FN.stok();
+}
+
+function applyStokSort(rows){
+  if(!stokSort.col) return rows;
+  const col = stokSort.col;
+  const dir = stokSort.dir === 'asc' ? 1 : -1;
+  const numericCols = ['Harga_Beli','Qty_Sisa','Qty_Awal'];
+  const dateCols = ['Tanggal_Beli'];
+  return [...rows].sort((a,b)=>{
+    let va = a[col], vb = b[col];
+    if(numericCols.includes(col)){ va = Number(va)||0; vb = Number(vb)||0; return (va-vb)*dir; }
+    if(dateCols.includes(col)){ va = new Date(va||0).getTime(); vb = new Date(vb||0).getTime(); return (va-vb)*dir; }
+    va = String(va||''); vb = String(vb||'');
+    return va.localeCompare(vb, 'id') * dir;
+  });
+}
+
+function sortArrow(col){
+  if(stokSort.col !== col) return '';
+  return stokSort.dir === 'asc' ? ' ▲' : ' ▼';
+}
+
+function thSort(label, col){
+  return `<th style="cursor:pointer;user-select:none;" onclick="sortStokBy('${col}')" title="Klik untuk urutkan">${label}${sortArrow(col)}</th>`;
+}
+
 async function loadStok(){
   const wrap = document.getElementById('stokTableWrap');
   if(!configured){ wrap.innerHTML = '<p class="empty">Backend belum dikonfigurasi.</p>'; return; }
@@ -1919,13 +1931,14 @@ async function loadStok(){
   }
 }
 
-function renderStokTable(wrap, rows){
+function renderStokTable(wrap, rowsMentah){
+  const rows = applyStokSort(rowsMentah);
   const pageRows = paginateRows('stok', rows);
   wrap.innerHTML = `
     <table style="min-width:1350px;">
       <thead><tr>
-        <th>S/N</th><th>Kode</th><th>Nama Barang</th><th>Brand</th><th>Kategori</th><th>Satuan</th><th>Toko</th>${currentCanSeeHarga ? '<th>Harga Beli</th>' : ''}
-        <th>Tgl Beli</th><th>Lokasi</th><th>Status Barang</th><th>Detail Lokasi</th><th>Sisa/Awal</th><th></th>
+        ${thSort('S/N','SN')}${thSort('Kode','Kode_Barang')}${thSort('Nama Barang','Nama_Barang')}${thSort('Brand','Merk')}${thSort('Kategori','Kategori')}${thSort('Satuan','Satuan')}${thSort('Toko','Toko')}${currentCanSeeHarga ? thSort('Harga Beli','Harga_Beli') : ''}
+        ${thSort('Tgl Beli','Tanggal_Beli')}${thSort('Lokasi','Status')}${thSort('Status Barang','Kondisi')}<th>Detail Lokasi</th><th>Sisa/Awal</th><th></th>
       </tr></thead>
       <tbody>
         ${pageRows.map(r=>`
@@ -2131,11 +2144,13 @@ let alatNamaSet = new Set();
 let alatSatuanSet = new Set();
 
 function refreshAlatSuggestions(){
-  document.getElementById('dlLokasiAlat').innerHTML = [...alatLokasiSet].map(l=>`<option value="${l}"></option>`).join('');
-  document.getElementById('dlNamaAlat').innerHTML = [...alatNamaSet].map(n=>`<option value="${n}"></option>`).join('');
+  const lokasiSorted = [...alatLokasiSet].sort((a,b)=>a.localeCompare(b,'id'));
+  const namaSorted = [...alatNamaSet].sort((a,b)=>a.localeCompare(b,'id'));
+  document.getElementById('dlLokasiAlat').innerHTML = lokasiSorted.map(l=>`<option value="${l}"></option>`).join('');
+  document.getElementById('dlNamaAlat').innerHTML = namaSorted.map(n=>`<option value="${n}"></option>`).join('');
   const fLokasi = document.getElementById('fAlatLokasi');
   const prevVal = fLokasi.value;
-  fLokasi.innerHTML = '<option value="">Semua</option>' + [...alatLokasiSet].map(l=>`<option value="${l}">${l}</option>`).join('');
+  fLokasi.innerHTML = '<option value="">Semua</option>' + lokasiSorted.map(l=>`<option value="${l}">${l}</option>`).join('');
   fLokasi.value = prevVal;
 }
 refreshAlatSuggestions();
