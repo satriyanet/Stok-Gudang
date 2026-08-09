@@ -407,6 +407,7 @@
                 </div>
                 <p style="font-size:11.5px;color:var(--ink-soft);margin:6px 0 0;">Barang ini bisa diambil sebagian — koreksi di sini kalau jumlah awal/sisa yang tercatat salah input.</p>
               </div>
+              <div class="field" id="saHargaBeliBox" style="display:none;"><label>Harga Beli / Unit (Rp)</label><input type="number" min="0" name="harga_beli" id="saHargaBeli" placeholder="isi atau koreksi kalau perlu"></div>
               <div class="field"><label>Satuan</label><input type="text" name="satuan" id="saSatuan" list="dlSatuan" placeholder="opsional, mis. unit / pcs / box / meter" autocomplete="off"></div>
               <div class="field"><label>Status Barang</label>
                 <select name="kondisi" id="saKondisi">
@@ -487,6 +488,24 @@
 
               <div class="field"><label>Diambil Untuk / Lokasi Tujuan</label><input type="text" name="lokasi" id="kLokasi" placeholder="mis. Kantor Klien - Lt 2 / Tim Instalasi A" required></div>
               <div class="field full"><label>Catatan</label><input type="text" name="catatan" id="kCatatan" placeholder="opsional"></div>
+
+              <div class="field full" id="kJugaAlatBox">
+                <div class="checkline">
+                  <input type="checkbox" id="chkJugaAlat">
+                  <label style="margin:0;" for="chkJugaAlat">Catat juga sebagai Alat di Daftar Alat (mis. buat mengganti alat rusak di tas kerja)</label>
+                </div>
+                <div class="form-grid" id="kAlatDetailBox" style="display:none;margin-top:10px;">
+                  <div class="field"><label>Lokasi Alat</label><input type="text" id="kAlatLokasi" list="dlLokasiAlat" placeholder="Tas Tools Kerja / Tas Tools Kantor" autocomplete="off"></div>
+                  <div class="field"><label>Kondisi Alat</label>
+                    <select id="kAlatKondisi">
+                      <option>Bagus</option>
+                      <option>Rusak</option>
+                      <option>Hilang</option>
+                      <option>Dipinjam</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
             <div style="margin-top:16px;">
               <button type="submit" class="btn">Catat Pengambilan</button>
@@ -868,7 +887,8 @@ const RPC_MAP = {
   updateStokUnit: {
     fn:'stok_update_unit', build:p=>({p_sn_asli:p.sn_asli, p_sn_baru:p.sn_baru||null, p_kode_barang:p.kode_barang||null, p_nama_barang:p.nama_barang||null,
       p_merk:p.merk||null, p_toko:p.toko||null, p_tanggal:p.tanggal||null, p_status:p.status||null, p_lokasi:p.lokasi||null, p_catatan:p.catatan||null, p_kondisi:p.kondisi||null,
-      p_qty_awal:p.qty_awal?Number(p.qty_awal):null, p_qty_sisa:p.qty_sisa!==undefined&&p.qty_sisa!==''?Number(p.qty_sisa):null}),
+      p_qty_awal:p.qty_awal?Number(p.qty_awal):null, p_qty_sisa:p.qty_sisa!==undefined&&p.qty_sisa!==''?Number(p.qty_sisa):null,
+      p_harga_beli:p.harga_beli!==undefined&&p.harga_beli!==''?Number(p.harga_beli):null}),
     map:rows=>{ const r = rowOrEmpty(rows); return {updated:true, sn_baru:r.sn_baru}; }
   },
   updateMasterBarang: {
@@ -1519,6 +1539,9 @@ function editStokUnit(sn){
   document.getElementById('saTipeStokBox').style.display = 'none';
   document.getElementById('saPanjangMeterBox').style.display = 'none';
   document.getElementById('saPanjangMeter').required = false;
+  if(currentCanSeeHarga){
+    document.getElementById('saHargaBeli').value = item.Harga_Beli || '';
+  }
 
   const tgl = item.Tanggal_Beli ? new Date(item.Tanggal_Beli) : null;
   document.getElementById('saTanggal').value = tgl && !isNaN(tgl) ? tgl.toISOString().slice(0,10) : '';
@@ -1644,7 +1667,12 @@ document.getElementById('btnBatalKeluar').addEventListener('click', ()=>{
   document.getElementById('kSNListItems').innerHTML = '';
   document.getElementById('kSatuanBox').style.display = 'block';
   document.getElementById('kMeteranBox').style.display = 'none';
+  document.getElementById('kAlatDetailBox').style.display = 'none';
   pindahKeSubTab('view-stok', 'stok-daftar');
+});
+
+document.getElementById('chkJugaAlat').addEventListener('change', e=>{
+  document.getElementById('kAlatDetailBox').style.display = e.target.checked ? 'grid' : 'none';
 });
 
 let barangTersediaKeluar = [];
@@ -1678,10 +1706,12 @@ document.getElementById('kKodeBarang').addEventListener('change', async e=>{
   const satuanBox = document.getElementById('kSatuanBox');
   const meteranBox = document.getElementById('kMeteranBox');
   const hint = document.getElementById('hintKeluar');
+  const jugaAlatBox = document.getElementById('kJugaAlatBox');
 
   if(!item){
     satuanBox.style.display = 'block';
     meteranBox.style.display = 'none';
+    jugaAlatBox.style.display = 'block';
     document.getElementById('kSNListBox').style.display = 'none';
     document.getElementById('kSNListItems').innerHTML = '';
     return;
@@ -1690,6 +1720,9 @@ document.getElementById('kKodeBarang').addEventListener('change', async e=>{
   if(item.tipe_stok === 'Meteran'){
     satuanBox.style.display = 'none';
     meteranBox.style.display = 'block';
+    jugaAlatBox.style.display = 'none';
+    document.getElementById('chkJugaAlat').checked = false;
+    document.getElementById('kAlatDetailBox').style.display = 'none';
     hint.textContent = 'Barang ini bisa diambil sebagian — pilih kemasan/batch-nya, lalu isi berapa jumlah yang diambil. Sisanya otomatis terhitung.';
     const selGulungan = document.getElementById('kGulungan');
     selGulungan.innerHTML = '<option value="">Memuat gulungan...</option>';
@@ -1714,6 +1747,7 @@ document.getElementById('kKodeBarang').addEventListener('change', async e=>{
   // Mode Satuan (seperti sebelumnya)
   satuanBox.style.display = 'block';
   meteranBox.style.display = 'none';
+  jugaAlatBox.style.display = 'block';
   hint.textContent = 'Pilih jenis barang, lalu centang S/N spesifik yang diambil (disarankan, agar mudah ditrace). Kalau barang ini tidak perlu dibedakan per S/N, biarkan tidak dicentang dan isi Jumlah saja — sistem otomatis memilih dari yang paling lama masuk.';
   const box = document.getElementById('kSNListBox');
   const listEl = document.getElementById('kSNListItems');
@@ -1779,6 +1813,11 @@ document.getElementById('formKeluar').addEventListener('submit', async e=>{
 
   const payload = { kode_barang: item.kode_barang, lokasi, catatan };
   const snPilih = Array.from(document.querySelectorAll('input[name="sn_pilih"]:checked')).map(el=>el.value);
+  const jugaAlat = document.getElementById('chkJugaAlat').checked;
+  const alatLokasi = document.getElementById('kAlatLokasi').value;
+  const alatKondisi = document.getElementById('kAlatKondisi').value;
+
+  if(jugaAlat && !alatLokasi){ msg.className='msg err'; msg.textContent='Isi Lokasi Alat, atau batalkan centang "Catat juga sebagai Alat".'; return; }
 
   if(snPilih.length > 0){
     payload.sn_list = snPilih;
@@ -1790,11 +1829,28 @@ document.getElementById('formKeluar').addEventListener('submit', async e=>{
 
   try{
     const result = await apiPost('keluarBarang', payload);
+    const snDiambil = result.sn_diambil||[];
+    let pesanAlat = '';
+    if(jugaAlat && snDiambil.length > 0){
+      try{
+        await apiPost('addAlat', {
+          nama_alat: item.nama_barang + (item.merk ? ' - ' + item.merk : ''),
+          lokasi: alatLokasi,
+          kondisi: alatKondisi,
+          jumlah: snDiambil.length,
+          catatan: `Dari Barang Keluar — S/N: ${snDiambil.join(', ')}`
+        });
+        pesanAlat = ' Sekaligus tercatat di Daftar Alat.';
+      }catch(errAlat){
+        pesanAlat = ' (Gagal mencatat ke Daftar Alat: ' + errAlat.message + ')';
+      }
+    }
     msg.className = 'msg ok';
-    msg.textContent = `Tercatat. S/N yang diambil: ${(result.sn_diambil||[]).join(', ')}`;
+    msg.textContent = `Tercatat. S/N yang diambil: ${snDiambil.join(', ')}.${pesanAlat}`;
     e.target.reset();
     document.getElementById('kSNListBox').style.display = 'none';
     document.getElementById('kSNListItems').innerHTML = '';
+    document.getElementById('kAlatDetailBox').style.display = 'none';
     loadStok();
     loadDashboard();
     loadBarangTersediaUntukKeluar();
@@ -2354,6 +2410,7 @@ async function enterApp(recordThisLogin){
   document.getElementById('navUsers').style.display = currentIsAdmin ? 'flex' : 'none';
   document.getElementById('navPembelian').style.display = currentCanSeeHarga ? 'flex' : 'none';
   document.getElementById('navHarga').style.display = currentCanSeeHarga ? 'flex' : 'none';
+  document.getElementById('saHargaBeliBox').style.display = currentCanSeeHarga ? 'block' : 'none';
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('btnLogout').style.display = 'inline';
