@@ -130,6 +130,9 @@
   .subnav-btn{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink-soft);}
   .subnav-btn:hover{background:var(--bg);}
   .subnav-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .dash-filter-btn{background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink-soft);}
+  .dash-filter-btn:hover{background:var(--bg);}
+  .dash-filter-btn.active{background:var(--amber);color:#1a1200;border-color:var(--amber);}
   .subview{display:none;}
   .subview.active{display:block;}
   .badge.Bagus{background:#e5f5ec;color:var(--green);}
@@ -280,7 +283,13 @@
             </div>
           </div>
         </div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Cari nama barang untuk memastikan tiap barang tercatat terpisah dengan stoknya masing-masing. Klik salah satu baris (atau pilih dari dropdown) untuk melihat daftar unit S/N-nya.</p>
+        <div class="subnav" style="margin-bottom:12px;">
+          <button class="dash-filter-btn active" data-filter="tersedia" onclick="gantiDashFilter('tersedia')">Semua Tersedia</button>
+          <button class="dash-filter-btn" data-filter="baru" onclick="gantiDashFilter('baru')">Baru</button>
+          <button class="dash-filter-btn" data-filter="bekas" onclick="gantiDashFilter('bekas')">Bekas</button>
+          <button class="dash-filter-btn" data-filter="terpasang" onclick="gantiDashFilter('terpasang')">Terpasang</button>
+        </div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;" id="hintDashStok">Cari nama barang untuk memastikan tiap barang tercatat terpisah dengan stoknya masing-masing. Klik salah satu baris (atau pilih dari dropdown) untuk melihat daftar unit S/N-nya.</p>
         <div id="dashStokWrap"><p class="empty">Memuat...</p></div>
       </div>
     </section>
@@ -850,7 +859,7 @@ const RPC_MAP = {
     map:rows=>rows.map(r=>({kode_barang:r.kode_barang, nama_barang:r.nama_barang, merk:r.merk, kategori:r.kategori, satuan:r.satuan, tipe_stok:r.tipe_stok||'Satuan', total:r.total, nilai_gudang:r.nilai_gudang,
       per_lokasi:{Gudang:r.lokasi_gudang||0, Terpasang:r.lokasi_terpasang||0},
       per_kondisi:{Baru:r.kondisi_baru||0, Bekas:r.kondisi_bekas||0, Hilang:r.kondisi_hilang||0, Rusak:r.kondisi_rusak||0},
-      tersedia_gudang:r.tersedia_gudang||0}))
+      tersedia_gudang:r.tersedia_gudang||0, gudang_baru:r.gudang_baru||0, gudang_bekas:r.gudang_bekas||0}))
   },
   getAlat: {
     fn:'alat_list', build:p=>({p_lokasi:p.lokasi||null, p_kondisi:p.kondisi||null, p_cari:p.cari||null}),
@@ -1107,10 +1116,12 @@ async function checkConn(){
 
 /* ---------- Dashboard ---------- */
 function renderDashboard(d){
+  const stokDiGudang = d.total_unit - (d.per_lokasi.Terpasang||0);
   document.getElementById('dashCards').innerHTML = `
-    <div class="card accent"><div class="label">Total Unit Stok</div><div class="value">${d.total_unit}</div></div>
+    <div class="card accent"><div class="label">Total Stok di Gudang</div><div class="value">${stokDiGudang}</div></div>
     <div class="card"><div class="label">Jenis Barang</div><div class="value">${d.total_jenis_barang}</div></div>
-    <div class="card"><div class="label">Tersedia di Gudang</div><div class="value">${d.tersedia_gudang}</div></div>
+    <div class="card"><div class="label">Tersedia (Baru/Bekas)</div><div class="value">${d.tersedia_gudang}</div></div>
+    <div class="card"><div class="label">Total Semua Unit (termasuk Terpasang)</div><div class="value">${d.total_unit}</div></div>
     ${currentCanSeeHarga ? `<div class="card"><div class="label">Nilai Stok di Gudang</div><div class="value">${rupiah(d.nilai_stok_gudang)}</div></div>` : ''}
   `;
   const lokasi = ['Gudang','Terpasang'];
@@ -1136,6 +1147,31 @@ async function loadDashboard(){
 
 /* ---------- Stok Barang di Gudang (tabel di Dashboard) ---------- */
 let dashRingkasanGudang = [];
+let dashFilterMode = 'tersedia'; // tersedia | baru | bekas | terpasang
+
+function dashFilterCount(r){
+  if(dashFilterMode === 'baru') return r.gudang_baru || 0;
+  if(dashFilterMode === 'bekas') return r.gudang_bekas || 0;
+  if(dashFilterMode === 'terpasang') return r.per_lokasi.Terpasang || 0;
+  return r.tersedia_gudang || 0;
+}
+
+function dashFilterLabel(){
+  if(dashFilterMode === 'baru') return 'Baru di Gudang';
+  if(dashFilterMode === 'bekas') return 'Bekas di Gudang';
+  if(dashFilterMode === 'terpasang') return 'Terpasang';
+  return 'Tersedia di Gudang';
+}
+
+function gantiDashFilter(mode){
+  dashFilterMode = mode;
+  document.querySelectorAll('.dash-filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.filter === mode);
+  });
+  document.getElementById('dashJenisBarang').value = '';
+  pageState.dashRingkasan = 1;
+  loadDashStokGudang();
+}
 
 async function loadDashStokGudang(){
   const wrap = document.getElementById('dashStokWrap');
@@ -1143,11 +1179,12 @@ async function loadDashStokGudang(){
   wrap.innerHTML = '<p class="empty">Memuat...</p>';
   try{
     const rows = await apiGet('getInventarisRingkasan');
-    dashRingkasanGudang = rows.filter(r => (r.tersedia_gudang||0) > 0);
+    dashRingkasanGudang = rows.filter(r => dashFilterCount(r) > 0);
 
     const prevVal = sel.value;
+    const satuanLabel = mode => mode==='terpasang' ? 'unit' : '';
     sel.innerHTML = '<option value="">Semua jenis barang (ringkasan)</option>' +
-      dashRingkasanGudang.map((r,i)=>`<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — ${r.tersedia_gudang} unit</option>`).join('');
+      dashRingkasanGudang.map((r,i)=>`<option value="${i}">${r.nama_barang}${r.merk ? ' — ' + r.merk : ''} (${r.kode_barang}) — ${dashFilterCount(r)} ${r.tipe_stok==='Meteran' && dashFilterMode!=='terpasang' ? (r.satuan||'') : 'unit'}</option>`).join('');
     sel.value = prevVal;
 
     if(sel.value !== ''){
@@ -1164,14 +1201,14 @@ function renderDashStokRingkasan(){
   const wrap = document.getElementById('dashStokWrap');
   const cari = document.getElementById('dashCariNama').value.trim().toLowerCase();
 
-  if(dashRingkasanGudang.length === 0){ wrap.innerHTML = '<p class="empty">Tidak ada stok di Gudang saat ini.</p>'; return; }
+  if(dashRingkasanGudang.length === 0){ wrap.innerHTML = `<p class="empty">Tidak ada barang dengan status "${dashFilterLabel()}" saat ini.</p>`; return; }
   const items = dashRingkasanGudang.map((r,i)=>({r,i})).filter(x => !cari || (x.r.nama_barang||'').toLowerCase().includes(cari));
   if(items.length === 0){ wrap.innerHTML = `<p class="empty">Tidak ada barang dengan nama mengandung "${cari}".</p>`; return; }
   RERENDER_FN.dashRingkasan = renderDashStokRingkasan;
   const pageItems = paginateRows('dashRingkasan', items);
   wrap.innerHTML = `
     <table>
-      <thead><tr><th>Nama Barang</th><th>Brand</th><th>Kode</th><th>Kategori</th><th>Satuan</th><th>Tersedia di Gudang</th></tr></thead>
+      <thead><tr><th>Nama Barang</th><th>Brand</th><th>Kode</th><th>Kategori</th><th>Satuan</th><th>${dashFilterLabel()}</th></tr></thead>
       <tbody>
         ${pageItems.map(({r,i})=>`
           <tr style="cursor:pointer;" onclick="pilihJenisBarangDashboard(${i})">
@@ -1180,7 +1217,7 @@ function renderDashStokRingkasan(){
             <td class="sn-cell">${r.kode_barang}</td>
             <td>${r.kategori || '-'}</td>
             <td>${r.satuan || '-'}</td>
-            <td><strong>${r.tersedia_gudang}${r.tipe_stok==='Meteran' ? ' ' + (r.satuan||'') : ''}</strong></td>
+            <td><strong>${dashFilterCount(r)}${r.tipe_stok==='Meteran' && dashFilterMode!=='terpasang' ? ' ' + (r.satuan||'') : ''}</strong></td>
           </tr>
         `).join('')}
       </tbody>
@@ -1207,16 +1244,21 @@ async function renderDashStokDetail(index){
   if(!item){ renderDashStokRingkasan(); return; }
   wrap.innerHTML = '<p class="empty">Memuat...</p>';
   try{
-    const rowsMentah = await apiGet('getStok', {kode_barang: item.kode_barang, status: 'Gudang'});
+    const statusCari = dashFilterMode === 'terpasang' ? 'Terpasang' : 'Gudang';
+    const rowsMentah = await apiGet('getStok', {kode_barang: item.kode_barang, status: statusCari});
     // Kode Barang saja tidak selalu unik per barang (ada kemungkinan dipakai
     // untuk beberapa nama berbeda) — saring lagi persis sesuai Nama & Merk
-    // yang dipilih, dan hanya yang benar-benar "tersedia" (kondisi Baru/Bekas),
-    // supaya S/N barang lain atau yang Hilang/Rusak tidak ikut tercampur.
-    dashStokDetailRows = rowsMentah.filter(r =>
-      r.Nama_Barang === item.nama_barang && (r.Merk||'') === (item.merk||'') &&
-      (r.Kondisi === 'Baru' || r.Kondisi === 'Bekas') &&
-      (item.tipe_stok !== 'Meteran' || Number(r.Qty_Sisa) > 0)
-    );
+    // yang dipilih. Untuk mode Gudang, hanya kondisi Baru/Bekas yang dianggap
+    // "tersedia"; untuk mode Terpasang, semua kondisi ditampilkan.
+    dashStokDetailRows = rowsMentah.filter(r => {
+      if(r.Nama_Barang !== item.nama_barang || (r.Merk||'') !== (item.merk||'')) return false;
+      if(dashFilterMode === 'terpasang') return true;
+      if(dashFilterMode === 'baru' && r.Kondisi !== 'Baru') return false;
+      if(dashFilterMode === 'bekas' && r.Kondisi !== 'Bekas') return false;
+      if(dashFilterMode === 'tersedia' && r.Kondisi !== 'Baru' && r.Kondisi !== 'Bekas') return false;
+      if(item.tipe_stok === 'Meteran' && dashFilterMode !== 'terpasang' && Number(r.Qty_Sisa) <= 0) return false;
+      return true;
+    });
     dashStokDetailIndex = index;
     pageState.dashDetail = 1;
     renderDashStokDetailPage();
@@ -1229,14 +1271,15 @@ function renderDashStokDetailPage(){
   const wrap = document.getElementById('dashStokWrap');
   const item = dashRingkasanGudang[dashStokDetailIndex];
   const judul = `${item.nama_barang}${item.merk ? ' — ' + item.merk : ''} (${item.kode_barang})`;
-  const isMeteran = item.tipe_stok === 'Meteran';
-  if(dashStokDetailRows.length === 0){ wrap.innerHTML = `<p class="empty">Tidak ada unit "${judul}" di Gudang.</p>`; return; }
+  const isMeteran = item.tipe_stok === 'Meteran' && dashFilterMode !== 'terpasang';
+  const tampilkanLokasi = dashFilterMode === 'terpasang';
+  if(dashStokDetailRows.length === 0){ wrap.innerHTML = `<p class="empty">Tidak ada unit "${judul}" dengan status "${dashFilterLabel()}".</p>`; return; }
   RERENDER_FN.dashDetail = renderDashStokDetailPage;
   const pageRows = paginateRows('dashDetail', dashStokDetailRows);
   wrap.innerHTML = `
     <p style="font-size:13px;margin:0 0 10px;"><button class="btn ghost small" onclick="document.getElementById('dashJenisBarang').value='';renderDashStokRingkasan();">← Kembali ke ringkasan</button></p>
     <table>
-      <thead><tr><th>S/N</th><th>Brand</th><th>Status Barang</th>${isMeteran ? '<th>Sisa/Awal</th>' : ''}<th>Tanggal Masuk</th></tr></thead>
+      <thead><tr><th>S/N</th><th>Brand</th><th>Status Barang</th>${isMeteran ? '<th>Sisa/Awal</th>' : ''}${tampilkanLokasi ? '<th>Detail Lokasi</th>' : ''}<th>Tanggal Masuk</th></tr></thead>
       <tbody>
         ${pageRows.map(r=>`
           <tr>
@@ -1244,6 +1287,7 @@ function renderDashStokDetailPage(){
             <td>${r.Merk || '-'}</td>
             <td><span class="badge ${r.Kondisi}">${r.Kondisi}</span></td>
             ${isMeteran ? `<td>${r.Qty_Sisa} / ${r.Qty_Awal} ${item.satuan||''}</td>` : ''}
+            ${tampilkanLokasi ? `<td>${r.Lokasi || '-'}</td>` : ''}
             <td>${fmtTgl(r.Tanggal_Beli)}</td>
           </tr>
         `).join('')}
