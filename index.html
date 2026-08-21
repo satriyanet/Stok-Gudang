@@ -351,7 +351,9 @@
       <div class="subnav">
         <button class="subnav-btn active" data-sub="stok-daftar">Daftar Stok</button>
         <button class="subnav-btn" data-sub="stok-tambah">Tambah Stok</button>
+        <button class="subnav-btn" data-sub="stok-riwayat-tambah">Riwayat Tambah Stok</button>
         <button class="subnav-btn" data-sub="stok-keluar">Barang Keluar</button>
+        <button class="subnav-btn" data-sub="stok-riwayat-keluar">Riwayat Keluar</button>
       </div>
 
       <!-- Sub: Daftar Stok -->
@@ -460,6 +462,18 @@
         </div>
       </div>
 
+      <!-- Sub: Riwayat Tambah Stok -->
+      <div class="subview" id="sub-stok-riwayat-tambah">
+        <div class="panel">
+          <div class="filter-bar">
+            <div class="field" style="flex:1;"><label>Cari (Kode, Nama Barang, Toko, atau nama yang input)</label><input type="text" id="fRiwayatTambah" placeholder="ketik untuk mencari..."></div>
+            <button class="btn small" id="btnCariRiwayatTambah">Cari</button>
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Menampilkan seluruh transaksi Tambah Stok — gunakan pencarian untuk mempersempit, atau klik judul kolom untuk mengurutkan (mis. urutkan per Kode/Nama Barang untuk cek apakah ada yang dobel diinput).</p>
+          <div id="riwayatTambahWrap"><p class="empty">Memuat...</p></div>
+        </div>
+      </div>
+
       <!-- Sub: Barang Keluar -->
       <div class="subview" id="sub-stok-keluar">
         <div class="panel">
@@ -522,6 +536,18 @@
             </div>
             <div class="msg" id="msgKeluar"></div>
           </form>
+        </div>
+      </div>
+
+      <!-- Sub: Riwayat Keluar -->
+      <div class="subview" id="sub-stok-riwayat-keluar">
+        <div class="panel">
+          <div class="filter-bar">
+            <div class="field" style="flex:1;"><label>Cari (S/N, Nama Barang, Lokasi, atau nama yang mengambil)</label><input type="text" id="fRiwayatKeluar" placeholder="ketik untuk mencari..."></div>
+            <button class="btn small" id="btnCariRiwayatKeluar">Cari</button>
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Menampilkan 500 transaksi pengambilan barang terbaru — gunakan pencarian untuk mempersempit, atau klik judul kolom untuk mengurutkan (mis. urutkan per S/N untuk cek apakah ada yang dobel diambil).</p>
+          <div id="riwayatKeluarWrap"><p class="empty">Memuat...</p></div>
         </div>
       </div>
     </section>
@@ -872,6 +898,10 @@ const RPC_MAP = {
   getAktivitas: {
     fn:'aktivitas_list', build:()=>({}),
     map:rows=>rows.map(r=>({tipe:r.tipe, waktu:r.waktu, nama:r.nama, detail:r.detail}))
+  },
+  getRiwayatKeluar: {
+    fn:'riwayat_barang_keluar', build:p=>({p_cari:p.cari||null}),
+    map:rows=>rows.map(r=>({Waktu:r.waktu, SN:r.sn, Kode_Barang:r.kode_barang, Nama_Barang:r.nama_barang, Merk:r.merk, Lokasi:r.lokasi, Keterangan:r.keterangan, Oleh:r.oleh, Tipe:r.tipe}))
   },
   getUsers: {
     fn:'users_list', build:()=>({}),
@@ -2011,6 +2041,146 @@ function renderStokTable(wrap, rowsMentah){
     ${paginationHtml('stok', rows.length)}`;
 }
 
+/* ---------- Sortir kolom generik (dipakai Riwayat Keluar & Riwayat Tambah Stok) ---------- */
+function genericSort(rows, sortState, numericCols, dateCols){
+  if(!sortState.col) return rows;
+  const col = sortState.col;
+  const dir = sortState.dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a,b)=>{
+    let va = a[col], vb = b[col];
+    if(numericCols && numericCols.includes(col)){ va = Number(va)||0; vb = Number(vb)||0; return (va-vb)*dir; }
+    if(dateCols && dateCols.includes(col)){ va = new Date(va||0).getTime(); vb = new Date(vb||0).getTime(); return (va-vb)*dir; }
+    va = String(va||''); vb = String(vb||'');
+    return va.localeCompare(vb, 'id') * dir;
+  });
+}
+
+/* ---------- Riwayat Barang Keluar ---------- */
+let riwayatKeluarRows = [];
+let riwayatKeluarSort = { col: 'Waktu', dir: 'desc' };
+
+async function loadRiwayatKeluar(){
+  const wrap = document.getElementById('riwayatKeluarWrap');
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    riwayatKeluarRows = await apiGet('getRiwayatKeluar', { cari: document.getElementById('fRiwayatKeluar').value });
+    pageState.riwayatKeluar = 1;
+    renderRiwayatKeluar();
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+function sortRiwayatKeluarBy(col){
+  if(riwayatKeluarSort.col === col){ riwayatKeluarSort.dir = riwayatKeluarSort.dir === 'asc' ? 'desc' : 'asc'; }
+  else { riwayatKeluarSort.col = col; riwayatKeluarSort.dir = 'asc'; }
+  pageState.riwayatKeluar = 1;
+  renderRiwayatKeluar();
+}
+
+function renderRiwayatKeluar(){
+  const wrap = document.getElementById('riwayatKeluarWrap');
+  if(riwayatKeluarRows.length === 0){ wrap.innerHTML = '<p class="empty">Belum ada transaksi barang keluar.</p>'; return; }
+  const rows = genericSort(riwayatKeluarRows, riwayatKeluarSort, [], ['Waktu']);
+  RERENDER_FN.riwayatKeluar = renderRiwayatKeluar;
+  const pageRows = paginateRows('riwayatKeluar', rows);
+  const arrow = col => riwayatKeluarSort.col===col ? (riwayatKeluarSort.dir==='asc'?' ▲':' ▼') : '';
+  const th = (label, col) => `<th style="cursor:pointer;user-select:none;" onclick="sortRiwayatKeluarBy('${col}')" title="Klik untuk urutkan">${label}${arrow(col)}</th>`;
+  wrap.innerHTML = `
+    <table style="min-width:1100px;">
+      <thead><tr>
+        ${th('Waktu','Waktu')}${th('S/N','SN')}${th('Kode','Kode_Barang')}${th('Nama Barang','Nama_Barang')}${th('Brand','Merk')}${th('Tipe','Tipe')}${th('Lokasi Tujuan','Lokasi')}<th>Catatan</th>${th('Diambil Oleh','Oleh')}
+      </tr></thead>
+      <tbody>
+        ${pageRows.map(r=>`
+          <tr>
+            <td>${fmtDT(r.Waktu)}</td>
+            <td class="sn-cell">${r.SN}</td>
+            <td>${r.Kode_Barang || '-'}</td>
+            <td>${r.Nama_Barang || '-'}</td>
+            <td>${r.Merk || '-'}</td>
+            <td><span class="badge ${r.Tipe==='Meteran'?'Bekas':'Baru'}">${tipeStokLabel(r.Tipe)}</span></td>
+            <td>${r.Lokasi || '-'}</td>
+            <td>${r.Keterangan || '-'}</td>
+            <td>${r.Oleh || '-'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ${paginationHtml('riwayatKeluar', rows.length)}`;
+}
+
+document.getElementById('btnCariRiwayatKeluar').addEventListener('click', loadRiwayatKeluar);
+document.getElementById('fRiwayatKeluar').addEventListener('keydown', e=>{ if(e.key==='Enter') loadRiwayatKeluar(); });
+
+/* ---------- Riwayat Tambah Stok ---------- */
+let riwayatTambahRows = [];
+let riwayatTambahSort = { col: 'Dibuat_Pada', dir: 'desc' };
+
+async function loadRiwayatTambah(){
+  const wrap = document.getElementById('riwayatTambahWrap');
+  wrap.innerHTML = '<p class="empty">Memuat...</p>';
+  try{
+    const semua = await apiGet('getPembelian');
+    const cari = document.getElementById('fRiwayatTambah').value.trim().toLowerCase();
+    riwayatTambahRows = cari ? semua.filter(r =>
+      (r.Kode_Barang||'').toLowerCase().includes(cari) ||
+      (r.Nama_Barang||'').toLowerCase().includes(cari) ||
+      (r.Toko||'').toLowerCase().includes(cari) ||
+      (r.Dibuat_Oleh||'').toLowerCase().includes(cari)
+    ) : semua;
+    pageState.riwayatTambah = 1;
+    renderRiwayatTambah();
+  }catch(err){
+    wrap.innerHTML = `<p class="empty">Gagal memuat: ${err.message}</p>`;
+  }
+}
+
+function sortRiwayatTambahBy(col){
+  if(riwayatTambahSort.col === col){ riwayatTambahSort.dir = riwayatTambahSort.dir === 'asc' ? 'desc' : 'asc'; }
+  else { riwayatTambahSort.col = col; riwayatTambahSort.dir = 'asc'; }
+  pageState.riwayatTambah = 1;
+  renderRiwayatTambah();
+}
+
+function renderRiwayatTambah(){
+  const wrap = document.getElementById('riwayatTambahWrap');
+  if(riwayatTambahRows.length === 0){ wrap.innerHTML = '<p class="empty">Belum ada transaksi Tambah Stok.</p>'; return; }
+  const numericCols = currentCanSeeHarga ? ['Qty','Harga_Beli'] : ['Qty'];
+  const rows = genericSort(riwayatTambahRows, riwayatTambahSort, numericCols, ['Dibuat_Pada','Tanggal']);
+  RERENDER_FN.riwayatTambah = renderRiwayatTambah;
+  const pageRows = paginateRows('riwayatTambah', rows);
+  const arrow = col => riwayatTambahSort.col===col ? (riwayatTambahSort.dir==='asc'?' ▲':' ▼') : '';
+  const th = (label, col) => `<th style="cursor:pointer;user-select:none;" onclick="sortRiwayatTambahBy('${col}')" title="Klik untuk urutkan">${label}${arrow(col)}</th>`;
+  wrap.innerHTML = `
+    <table style="min-width:1150px;">
+      <thead><tr>
+        ${th('Tanggal Beli','Tanggal')}${th('Kode','Kode_Barang')}${th('Nama Barang','Nama_Barang')}${th('Brand','Merk')}${th('Toko','Toko')}${th('Qty','Qty')}${currentCanSeeHarga ? th('Harga Beli','Harga_Beli') : ''}<th>No. Referensi</th><th>Catatan</th>${th('Diinput Oleh','Dibuat_Oleh')}${th('Diinput Pada','Dibuat_Pada')}
+      </tr></thead>
+      <tbody>
+        ${pageRows.map(r=>`
+          <tr>
+            <td>${fmtTgl(r.Tanggal)}</td>
+            <td>${r.Kode_Barang}</td>
+            <td>${r.Nama_Barang}</td>
+            <td>${r.Merk || '-'}</td>
+            <td>${r.Toko}</td>
+            <td>${r.Qty}</td>
+            ${currentCanSeeHarga ? `<td>${rupiah(r.Harga_Beli)}</td>` : ''}
+            <td>${r.No_Referensi || '-'}</td>
+            <td>${r.Catatan || '-'}</td>
+            <td>${r.Dibuat_Oleh || '-'}</td>
+            <td>${fmtDT(r.Dibuat_Pada)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ${paginationHtml('riwayatTambah', rows.length)}`;
+}
+
+document.getElementById('btnCariRiwayatTambah').addEventListener('click', loadRiwayatTambah);
+document.getElementById('fRiwayatTambah').addEventListener('keydown', e=>{ if(e.key==='Enter') loadRiwayatTambah(); });
+
 /* ---------- Export CSV ---------- */
 /* ---------- Pagination (dipakai di semua tabel, maks 15 baris/halaman) ---------- */
 const ROWS_PER_PAGE = 15;
@@ -2166,6 +2336,8 @@ document.querySelectorAll('.subnav-btn').forEach(btn=>{
     if(btn.dataset.sub === 'alat') loadAlat();
     if(btn.dataset.sub === 'stok-daftar') loadStok();
     if(btn.dataset.sub === 'stok-keluar') loadBarangTersediaUntukKeluar();
+    if(btn.dataset.sub === 'stok-riwayat-keluar') loadRiwayatKeluar();
+    if(btn.dataset.sub === 'stok-riwayat-tambah') loadRiwayatTambah();
     if(btn.dataset.sub === 'stok-tambah' && editingSN === null){
       // Masuk ke tab Tambah Stok secara manual (bukan lewat Edit Data) — pastikan form kosong
       document.getElementById('formStokManual').reset();
