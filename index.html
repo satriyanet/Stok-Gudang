@@ -2019,7 +2019,7 @@ function renderStokTable(wrap, rowsMentah){
           <tr>
             <td class="sn-cell">${r.SN}</td>
             <td>${r.Kode_Barang}</td>
-            <td>${r.Nama_Barang}</td>
+            <td>${r.Nama_Barang}${r.Catatan ? `<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">📝 ${r.Catatan}</div>` : ''}</td>
             <td>${r.Merk || '-'}</td>
             <td>${r.Kategori || '-'}</td>
             <td>${r.Satuan || '-'}</td>
@@ -2087,9 +2087,9 @@ function renderRiwayatKeluar(){
   const arrow = col => riwayatKeluarSort.col===col ? (riwayatKeluarSort.dir==='asc'?' ▲':' ▼') : '';
   const th = (label, col) => `<th style="cursor:pointer;user-select:none;" onclick="sortRiwayatKeluarBy('${col}')" title="Klik untuk urutkan">${label}${arrow(col)}</th>`;
   wrap.innerHTML = `
-    <table style="min-width:1100px;">
+    <table style="min-width:950px;">
       <thead><tr>
-        ${th('Waktu','Waktu')}${th('S/N','SN')}${th('Kode','Kode_Barang')}${th('Nama Barang','Nama_Barang')}${th('Brand','Merk')}${th('Tipe','Tipe')}${th('Lokasi Tujuan','Lokasi')}<th>Catatan</th>${th('Diambil Oleh','Oleh')}
+        ${th('Waktu','Waktu')}${th('S/N','SN')}${th('Kode','Kode_Barang')}${th('Nama Barang','Nama_Barang')}${th('Brand','Merk')}${th('Tipe','Tipe')}${th('Lokasi Tujuan','Lokasi')}${th('Diambil Oleh','Oleh')}
       </tr></thead>
       <tbody>
         ${pageRows.map(r=>`
@@ -2097,11 +2097,10 @@ function renderRiwayatKeluar(){
             <td>${fmtDT(r.Waktu)}</td>
             <td class="sn-cell">${r.SN}</td>
             <td>${r.Kode_Barang || '-'}</td>
-            <td>${r.Nama_Barang || '-'}</td>
+            <td>${r.Nama_Barang || '-'}${r.Keterangan ? `<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">📝 ${r.Keterangan}</div>` : ''}</td>
             <td>${r.Merk || '-'}</td>
             <td><span class="badge ${r.Tipe==='Meteran'?'Bekas':'Baru'}">${tipeStokLabel(r.Tipe)}</span></td>
             <td>${r.Lokasi || '-'}</td>
-            <td>${r.Keterangan || '-'}</td>
             <td>${r.Oleh || '-'}</td>
           </tr>
         `).join('')}
@@ -2153,22 +2152,21 @@ function renderRiwayatTambah(){
   const arrow = col => riwayatTambahSort.col===col ? (riwayatTambahSort.dir==='asc'?' ▲':' ▼') : '';
   const th = (label, col) => `<th style="cursor:pointer;user-select:none;" onclick="sortRiwayatTambahBy('${col}')" title="Klik untuk urutkan">${label}${arrow(col)}</th>`;
   wrap.innerHTML = `
-    <table style="min-width:1150px;">
+    <table style="min-width:1050px;">
       <thead><tr>
-        ${th('Tanggal Beli','Tanggal')}${th('Kode','Kode_Barang')}${th('Nama Barang','Nama_Barang')}${th('Brand','Merk')}${th('Toko','Toko')}${th('Qty','Qty')}${currentCanSeeHarga ? th('Harga Beli','Harga_Beli') : ''}<th>No. Referensi</th><th>Catatan</th>${th('Diinput Oleh','Dibuat_Oleh')}${th('Diinput Pada','Dibuat_Pada')}
+        ${th('Tanggal Beli','Tanggal')}${th('Kode','Kode_Barang')}${th('Nama Barang','Nama_Barang')}${th('Brand','Merk')}${th('Toko','Toko')}${th('Qty','Qty')}${currentCanSeeHarga ? th('Harga Beli','Harga_Beli') : ''}<th>No. Referensi</th>${th('Diinput Oleh','Dibuat_Oleh')}${th('Diinput Pada','Dibuat_Pada')}
       </tr></thead>
       <tbody>
         ${pageRows.map(r=>`
           <tr>
             <td>${fmtTgl(r.Tanggal)}</td>
             <td>${r.Kode_Barang}</td>
-            <td>${r.Nama_Barang}</td>
+            <td>${r.Nama_Barang}${r.Catatan ? `<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">📝 ${r.Catatan}</div>` : ''}</td>
             <td>${r.Merk || '-'}</td>
             <td>${r.Toko}</td>
             <td>${r.Qty}</td>
             ${currentCanSeeHarga ? `<td>${rupiah(r.Harga_Beli)}</td>` : ''}
             <td>${r.No_Referensi || '-'}</td>
-            <td>${r.Catatan || '-'}</td>
             <td>${r.Dibuat_Oleh || '-'}</td>
             <td>${fmtDT(r.Dibuat_Pada)}</td>
           </tr>
